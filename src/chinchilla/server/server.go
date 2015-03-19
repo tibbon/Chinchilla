@@ -30,3 +30,11 @@ func WebServer(portno int) {
 	http.ListenAndServe(":"+strconv.Itoa(portno), nil)
 
 }
+
+func MasterServer() {
+
+}
+
+func SlaveServer() {
+
+}

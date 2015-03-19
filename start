@@ -1,2 +1,0 @@
-go build src/chinchilla/startup/startup.go
-./startup $1
