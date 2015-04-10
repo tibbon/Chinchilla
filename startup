@@ -1,4 +1,4 @@
 pkill -f "chinchilla $1" #kill exiting servers of the same type on this machine
 git pull origin master #update code
-go build src/chinchilla/chinchilla/chinchilla.go # build startup script
+go build src/chinchilla/routers/chinchilla.go # build startup script
 ./chinchilla $1 $2 & #run startup 
