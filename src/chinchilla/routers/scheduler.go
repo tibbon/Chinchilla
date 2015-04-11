@@ -1,6 +1,8 @@
 package main
 
 import (
+	"chinchilla/mssg"
+	"encoding/gob"
 	"fmt"
 	"github.com/gorilla/mux"
 	"net"
@@ -29,9 +31,12 @@ func main() {
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "You got root")
 	}).Methods("get")
+
 	// Place rest of routes here
-	http.Handle("/", r)
+
 	go AcceptWorkers()
+
+	http.Handle("/", r)
 	http.ListenAndServe(portno, nil)
 }
 
@@ -47,9 +52,15 @@ func AcceptWorkers() {
 			continue
 		} else {
 			fmt.Println("got here")
-			conn.Write([]byte("Nice conn bae"))
-			conn.Close()
+			go RecvWork(conn)
 		}
 
 	}
+}
+
+func RecvWork(conn net.Conn) {
+	data := new(mssg.Connect)
+	dec := gob.NewDecoder(conn)
+	dec.Decode(data)
+	fmt.Printf("op %d, id % d", data.Op, data.Id)
 }

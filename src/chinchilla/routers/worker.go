@@ -1,10 +1,12 @@
 package main
 
 import (
+	"chinchilla/mssg"
+	"encoding/gob"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
+	"time"
 )
 
 func checkError(err error) {
@@ -17,6 +19,8 @@ func checkError(err error) {
 func main() {
 	args := os.Args
 
+	data := &mssg.Connect{0, 234}
+
 	if len(args) != 2 {
 		fmt.Println("usage is <ip:port>")
 		os.Exit(1)
@@ -24,10 +28,10 @@ func main() {
 
 	conn, err := net.Dial("tcp", args[1])
 	checkError(err)
+	enc := gob.NewEncoder(conn)
 
-	result, err := ioutil.ReadAll(conn)
-	checkError(err)
-	fmt.Println("got here")
-	fmt.Println(string(result))
+	enc.Encode(data)
+
+	time.Sleep(100000 * time.Millisecond)
 
 }
