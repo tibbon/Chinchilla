@@ -18,7 +18,6 @@ func checkError(err error) {
 
 func main() {
 	args := os.Args
-
 	data := &mssg.Connect{0, 234}
 
 	if len(args) != 2 {
@@ -28,8 +27,8 @@ func main() {
 
 	conn, err := net.Dial("tcp", args[1])
 	checkError(err)
-	enc := gob.NewEncoder(conn)
 
+	enc := gob.NewEncoder(conn)
 	enc.Encode(data)
 
 	time.Sleep(100000 * time.Millisecond)
