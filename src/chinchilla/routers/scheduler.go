@@ -48,6 +48,8 @@ func AcceptWorkers() {
 	ln, err := net.Listen("tcp", portno)
 	checkError(err)
 
+	slaves := make(map[uint32]net.Conn)
+
 	for {
 		fmt.Println("in loop")
 		conn, err := ln.Accept()
@@ -55,16 +57,23 @@ func AcceptWorkers() {
 			continue
 		} else {
 			fmt.Println("got here")
-			go RecvWork(conn)
+			go RecvWork(conn, &slaves)
 		}
 	}
 }
 
-func RecvWork(conn net.Conn) {
-	data := new(mssg.Connect)
+func RecvWork(conn net.Conn, slaves *map[uint32]net.Conn) {
 
+	data := new(mssg.Connect)
 	dec := gob.NewDecoder(conn)
 	dec.Decode(data)
+
+	mssg_type, err := conn.Read(one)
+
+	if data.Op == 0 && data.Id {
+		slaves[data.Id] = conn
+		fmt.Print("Added slave connection")
+	}
 
 	fmt.Printf("op %d, id % d", data.Op, data.Id)
 }
