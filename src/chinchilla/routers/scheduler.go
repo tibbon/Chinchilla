@@ -109,7 +109,7 @@ func RecvWork(conn net.Conn, workers map[uint32]Queue, RespQueue chan mssg.WorkR
 func SendResp(RespQueue chan mssg.WorkResp) {
 	for {
 		resp := <-RespQueue
-		host := strings.Join([]string{resp.SrcIp, ":", resp.Port}, "")
+		host := strings.Join([]string{resp.SrcIp, ":", resp.SrcPort}, "")
 		conn, err := net.Dial("tcp", host)
 		if err != nil {
 			continue

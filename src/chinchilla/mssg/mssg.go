@@ -7,19 +7,19 @@ type Connect struct {
 }
 
 type WorkReq struct {
-	Type  uint8
-	Arg1  string
-	Arg2  string
-	Arg3  uint32
-	SrcIp string
-	Port  string
+	Type    uint8
+	Arg1    string
+	Arg2    string
+	Arg3    uint32
+	SrcIp   string
+	SrcPort string
 }
 
 type WorkResp struct {
-	Type  uint8
-	Id    uint32
-	Data  []byte
-	SrcIp string
-	Port  string
-	RTime uint32
+	Type    uint8
+	Id      uint32
+	Data    []byte // Can be json kind of thing or string
+	SrcIp   string
+	SrcPort string
+	RTime   uint32
 }
