@@ -1,8 +1,20 @@
 package mssg
 
-type Msg struct {
-	Op   uint8  // Operation
+type Connect struct {
+	Type uint8  // Operation
 	Id   uint32 // Node ID
-	Type uint32 // Work type
-	// Args
+}
+
+type WorkReq struct {
+	Type  uint8
+	arg1  string
+	arg2  string
+	arg3  uint32
+	SrcIp string
+}
+
+type WorkResp struct {
+	Type  uint8
+	data  []byte
+	SrcIp string
 }
