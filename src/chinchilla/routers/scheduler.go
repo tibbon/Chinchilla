@@ -53,7 +53,8 @@ func AcceptWorkers() {
 	ln, err := net.Listen("tcp", portno)
 	checkError(err)
 
-	slaves := make(map[uint32]queue)
+	workers := make(map[uint32]queue)
+	RespQueue := make(chan mssg.WorkResp)
 
 	for {
 		fmt.Println("in loop")
@@ -62,30 +63,35 @@ func AcceptWorkers() {
 			continue
 		} else {
 			fmt.Println("got here")
-			go RecvWork(conn, &slaves)
+			go RecvWork(conn, &workers, RespQueue)
 		}
 	}
 }
 
-func RecvWork(conn net.Conn, slaves *map[uint32]queue) {
+func RecvWork(conn net.Conn, workers *map[uint32]queue, RespQueue chan mssg.RespQueue) {
 
-	data := new(mssg.Msg)
+	header := new(mssg.Msg)
+	resp := new(mssg.WorkResp)
 	dec := gob.NewDecoder(conn)
 	avgTimes := make(map[uint32]uint32)
 
-	dec.Decode(data)
+	dec.Decode(header)
 
-	if data.Op == 1 && data.Id {
-		slaves[data.Id] = conn
+	if header.Type == 1 && header.Id {
+		workers[header.Id] = conn
 		fmt.Print("Added slave connection")
 	} else {
 		conn.Close()
 		fmt.Println("improper connect")
 		return
 	}
+
 	for {
-		// Listen for work response
-		// add work response to shared channel
+		dec.Decode(resp)
+		if resp.Type == 1 {
+			conn.Close()
+			delete(workers, resp.Id)
+		}
 	}
 
 }

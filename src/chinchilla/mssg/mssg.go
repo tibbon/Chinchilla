@@ -15,6 +15,7 @@ type WorkReq struct {
 
 type WorkResp struct {
 	Type  uint8
+	Id    uint32
 	data  []byte
 	SrcIp string
 }
