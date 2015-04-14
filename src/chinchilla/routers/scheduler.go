@@ -11,6 +11,11 @@ import (
 	"strings"
 )
 
+type queue struct {
+	conn net.Conn
+	qVal uint32
+}
+
 func checkError(err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
@@ -48,7 +53,7 @@ func AcceptWorkers() {
 	ln, err := net.Listen("tcp", portno)
 	checkError(err)
 
-	slaves := make(map[uint32]net.Conn)
+	slaves := make(map[uint32]queue)
 
 	for {
 		fmt.Println("in loop")
@@ -62,18 +67,25 @@ func AcceptWorkers() {
 	}
 }
 
-func RecvWork(conn net.Conn, slaves *map[uint32]net.Conn) {
+func RecvWork(conn net.Conn, slaves *map[uint32]queue) {
 
-	data := new(mssg.Connect)
+	data := new(mssg.Msg)
 	dec := gob.NewDecoder(conn)
+	avgTimes := make(map[uint32]uint32)
+
 	dec.Decode(data)
 
-	mssg_type, err := conn.Read(one)
-
-	if data.Op == 0 && data.Id {
+	if data.Op == 1 && data.Id {
 		slaves[data.Id] = conn
 		fmt.Print("Added slave connection")
+	} else {
+		conn.Close()
+		fmt.Println("improper connect")
+		return
+	}
+	for {
+		// Listen for work response
+		// add work response to shared channel
 	}
 
-	fmt.Printf("op %d, id % d", data.Op, data.Id)
 }

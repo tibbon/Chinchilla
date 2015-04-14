@@ -1,6 +1,8 @@
 package mssg
 
-type Connect struct {
-	Op uint8
-	Id uint32
+type Msg struct {
+	Op   uint8  // Operation
+	Id   uint32 // Node ID
+	Type uint32 // Work type
+	// Args
 }
