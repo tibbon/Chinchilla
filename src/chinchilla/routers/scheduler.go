@@ -87,7 +87,7 @@ func RecvWork(conn net.Conn, workers map[uint32]Queue, RespQueue chan mssg.WorkR
 	dec.Decode(header)
 
 	if header.Type == 1 && header.Id != 0 {
-		workers[header.Id] = Queue{conn, header.QVal}
+		workers[header.Id] = Queue{conn, header.QVal} // Need to make thread safe
 		fmt.Print("Added slave connection")
 	} else {
 		conn.Close()
@@ -95,6 +95,7 @@ func RecvWork(conn net.Conn, workers map[uint32]Queue, RespQueue chan mssg.WorkR
 		return
 	}
 
+	// Loop until server send 1 (D/C) or process infinite responses and update time objects and add to queue
 	for {
 		dec.Decode(resp)
 		if resp.Type == 1 {
@@ -108,6 +109,7 @@ func RecvWork(conn net.Conn, workers map[uint32]Queue, RespQueue chan mssg.WorkR
 	}
 }
 
+// Thread to send responses back to hosts
 func SendResp(RespQueue chan mssg.WorkResp) {
 	for {
 		resp := <-RespQueue
@@ -119,6 +121,7 @@ func SendResp(RespQueue chan mssg.WorkResp) {
 	}
 }
 
+// Add req struct to a channel
 func AddReqQueue(w http.ResponseWriter, r *http.Request, ReqQueue chan mssg.WorkReq, typ int, arg1 string) {
 	// host := r.RemoteAddr // gets  hostname sender
 }
