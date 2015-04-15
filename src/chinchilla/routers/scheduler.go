@@ -133,8 +133,8 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs map[uint32]http.ResponseWriter)
 		resp := <-RespQueue
 		fmt.Println("Sending response to Host")
 		fmt.Println(string(resp.Data))
-		jobs[resp.WId].Header().Set("Content-Length", strconv.Itoa(len(resp.Data)))
-		_, err := jobs[resp.WId].Write(resp.Data)
+		// jobs[resp.WId].Header().Set("Content-Length", strconv.Itoa(50))
+		_, err := jobs[resp.WId].Write(resp.Data) // ERROR IS COMING FROM HERE
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
 		}
