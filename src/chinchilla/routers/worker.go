@@ -18,7 +18,8 @@ func checkError(err error) {
 
 func main() {
 	args := os.Args
-	data := &mssg.Connect{0, 234}
+	data := mssg.Connect{1, 1, 0}
+	wReq := new(mssg.WorkReq)
 
 	if len(args) != 2 {
 		fmt.Println("usage is <ip:port>")
@@ -29,7 +30,16 @@ func main() {
 	checkError(err)
 
 	enc := gob.NewEncoder(conn)
+	dec := gob.NewDecoder(conn)
 	enc.Encode(data)
+	err = dec.Decode(wReq)
+	fmt.Println("got here")
+	if err != nil {
+		fmt.Println("what went wrong?")
+	}
+	fmt.Printf("type %u, arg1 %s, host %s", wReq.Type, wReq.Arg1, wReq.W)
+	wResp := mssg.WorkResp{wReq.Type, 1, []byte("You win my heart!"), wReq.W, 10}
+	enc.Encode(wResp)
 
 	time.Sleep(100000 * time.Millisecond)
 
