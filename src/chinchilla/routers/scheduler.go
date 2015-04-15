@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -32,13 +33,14 @@ func main() {
 		fmt.Println("usage is <portno http> <portno tcp>")
 		os.Exit(1)
 	}
-
 	portno := strings.Join([]string{":", args[1]}, "")
 
+	ReqQueue := make(chan mssg.WorkReq)
 	r := mux.NewRouter()
 
-	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "You got root")
+	r.HandleFunc("/api/{type}/{arg1}", func(w http.ResponseWriter, r *http.Request) {
+		typ, _ := strconv.Atoi(mux.Vars(r)["type"])
+		AddReqQueue(w, r, ReqQueue, typ, mux.Vars(r)["arg1"])
 	}).Methods("get")
 
 	// Place rest of routes here
@@ -109,11 +111,14 @@ func RecvWork(conn net.Conn, workers map[uint32]Queue, RespQueue chan mssg.WorkR
 func SendResp(RespQueue chan mssg.WorkResp) {
 	for {
 		resp := <-RespQueue
-		host := strings.Join([]string{resp.SrcIp, ":", resp.SrcPort}, "")
-		conn, err := net.Dial("tcp", host)
+		conn, err := net.Dial("tcp", resp.Host)
 		if err != nil {
 			continue
 		}
-		conn.Write(resp.Data)
+		conn.Write(resp.Data) // writes raw bytes
 	}
+}
+
+func AddReqQueue(w http.ResponseWriter, r *http.Request, ReqQueue chan mssg.WorkReq, typ int, arg1 string) {
+	// host := r.RemoteAddr // gets  hostname sender
 }
