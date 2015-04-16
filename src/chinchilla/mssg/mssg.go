@@ -1,7 +1,7 @@
 package mssg
 
 type Connect struct {
-	Type uint8  "json:`type`" // Operation
+	Type uint8  `json:"type"` // Operation
 	Id   uint32 // Node ID
 	QVal uint32 // Value of q (0 is default)
 }
@@ -15,9 +15,13 @@ type WorkReq struct {
 }
 
 type WorkResp struct {
-	Type  uint8
-	Id    uint32
-	Data  string // Can be json kind of thing or string
-	WId   uint32
-	RTime uint32
+	Type  uint8        `json:"type"`
+	Id    uint32       `json:"id"`
+	Data  WorkRespData `json:"data"` // Can be json kind of thing or string
+	WId   uint32       `json:"work_id"`
+	RTime uint32       `json:"return_time"`
+}
+
+type WorkRespData struct {
+	Desc string `json:"description"`
 }
