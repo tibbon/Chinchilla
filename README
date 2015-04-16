@@ -1,10 +1,12 @@
 Todd Pollak
 Teddy Cleveland
 
-
+Before building you must set $GOPATH to be the path to the directory you are trying to compile from
 to build run 
 go build src/chinchilla/routers/scheduler.go
 go build src/chinchilla/routers/worker.go
+
+
 
 then to run scheduler (front end) ./scheduler <port> <port2>
 then to run worker (front end) ./scheduler <ip:port> <id>
