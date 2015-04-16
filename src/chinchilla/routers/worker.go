@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"time"
 )
 
 func checkError(err error) {
@@ -18,7 +17,7 @@ func checkError(err error) {
 
 func main() {
 	args := os.Args
-	data := mssg.Connect{1, 1, 50}
+	data := mssg.Connect{1, 1, 0}
 	wReq := new(mssg.WorkReq)
 
 	if len(args) != 2 {
@@ -32,18 +31,17 @@ func main() {
 	enc := gob.NewEncoder(conn)
 	dec := gob.NewDecoder(conn)
 	enc.Encode(data)
-	err = dec.Decode(wReq)
-	fmt.Println("got here")
-	if err != nil {
-		fmt.Println("wrong send 1?")
+	for {
+		err = dec.Decode(wReq)
+		if err != nil {
+			fmt.Println("wrong send 1?")
+		}
+		fmt.Printf("type %u, arg1 %s, host %s\n", wReq.Type, wReq.Arg1, wReq.WId)
+		wResp := mssg.WorkResp{1, 1, []byte("You win my the data!"), wReq.WId, 10}
+		err = enc.Encode(wResp)
+		if err != nil {
+			fmt.Println("wrong send 2?")
+		}
 	}
-	fmt.Printf("type %u, arg1 %s, host %s", wReq.Type, wReq.Arg1, wReq.WId)
-	wResp := mssg.WorkResp{1, 1, []byte("You win my heart!"), wReq.WId, 10}
-	err = enc.Encode(wResp)
-	if err != nil {
-		fmt.Println("wrong send 2?")
-	}
-
-	time.Sleep(100000 * time.Millisecond)
 
 }

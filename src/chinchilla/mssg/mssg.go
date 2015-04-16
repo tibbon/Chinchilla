@@ -3,7 +3,7 @@ package mssg
 type Connect struct {
 	Type uint8  // Operation
 	Id   uint32 // Node ID
-	QVal uint32
+	QVal uint32 // Value of q (0 is default)
 }
 
 type WorkReq struct {

@@ -40,7 +40,7 @@ func main() {
 	r := mux.NewRouter()
 
 	jobs := make(map[uint32]http.ResponseWriter)
-	ids := make([]uint32, 10000) // If over 10k request will break, make extensible later
+	ids := make([]uint32, 10000) // make extensible later
 
 	for i := 0; i < 10000; i++ {
 		ids[i] = uint32(i)
@@ -123,7 +123,7 @@ func RecvWork(conn net.Conn, workers map[uint32]Queue, RespQueue chan mssg.WorkR
 			delete(workers, resp.Id)
 			return
 		} else {
-			RespQueue <- *resp               // May be pointer issue, need to test hard
+			RespQueue <- *resp
 			avgTimes[resp.Type] = resp.RTime // Add weighted avg function
 		}
 	}
@@ -134,10 +134,10 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs map[uint32]http.ResponseWriter)
 	for {
 		resp := <-RespQueue
 		fmt.Println("Sending response to Host")
-		fmt.Println(string(resp.Data))
-		_, err := jobs[resp.WId].Write(resp.Data) // ERROR IS COMING FROM HERE
+		_, err := jobs[resp.WId].Write(resp.Data)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
+			os.Exit(1)
 		}
 
 	}
@@ -155,7 +155,6 @@ func SendWorkReq(ReqQueue chan mssg.WorkReq, workers map[uint32]Queue) {
 		req := <-ReqQueue
 		fmt.Println("Sending work request")
 		err := workers[1].Enc.Encode(req)
-		fmt.Println(workers[1].QVal)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
 		}
