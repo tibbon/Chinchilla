@@ -41,11 +41,8 @@ func main() {
 	enc.Encode(data)
 	for {
 		dec.Decode(wReq)
-		if err != nil {
-			fmt.Println("wrong send 1?")
-		}
 		fmt.Printf("type %u, arg1 %s, host %s\n", wReq.Type, wReq.Arg1, wReq.WId)
-		wResp := mssg.WorkResp{1, 1, []byte("You win my the data!\n"), wReq.WId, 10}
+		wResp := mssg.WorkResp{1, 1, string("You win my the data!\n"), wReq.WId, 10}
 		err = enc.Encode(wResp)
 		if err != nil {
 			fmt.Println("wrong send 2?")

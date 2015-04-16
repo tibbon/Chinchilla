@@ -17,7 +17,7 @@ type WorkReq struct {
 type WorkResp struct {
 	Type  uint8
 	Id    uint32
-	Data  []byte // Can be json kind of thing or string
+	Data  string // Can be json kind of thing or string
 	WId   uint32
 	RTime uint32
 }

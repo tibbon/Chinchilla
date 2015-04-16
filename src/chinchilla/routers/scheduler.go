@@ -136,6 +136,7 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs map[uint32]http.ResponseWriter)
 		resp := <-RespQueue
 		fmt.Println("Sending response to Host")
 		json_resp, _ := json.Marshal(resp)
+		fmt.Println(resp.Data)
 		_, err := jobs[resp.WId].Write(json_resp)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
