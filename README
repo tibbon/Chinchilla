@@ -1,0 +1,26 @@
+Todd Pollak
+Teddy Cleveland
+
+
+to build run 
+go build src/chinchilla/routers/scheduler.go
+go build src/chinchilla/routers/worker.go
+
+then to run scheduler (front end) ./scheduler <port> <port2>
+then to run worker (front end) ./scheduler <ip:port> <id>
+id can be anything
+
+to request use ip:port/api/<int>/<string>
+
+the bulk of our code can be found in
+
+src/chinchilla/routers/scheduler.go
+src/chinchilla/routers/worker.go
+src/chinchilla/mssg/mssg.go
+
+We have implemented most of the communication infrastructure.
+We need to change some of it slightly to ensure it is thread safe
+and robust, but we will be doing that this weekend
+We will then build a load generator and start writing our load balancing
+algorithm. The biggest infrastructure part we still need to build
+is redundancy if a node goes down so we don't lose the entire queue.
