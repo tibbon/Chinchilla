@@ -1,7 +1,7 @@
 package mssg
 
 type Connect struct {
-	Type uint8  // Operation
+	Type uint8  "json:`type`" // Operation
 	Id   uint32 // Node ID
 	QVal uint32 // Value of q (0 is default)
 }
