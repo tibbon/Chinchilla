@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 )
 
 func checkError(err error) {
@@ -16,12 +17,19 @@ func checkError(err error) {
 }
 
 func main() {
+
 	args := os.Args
-	data := mssg.Connect{1, 1, 0}
+
+	if len(args) != 3 {
+		fmt.Println("usage is <ip:port> <id>")
+		os.Exit(1)
+	}
+	id, _ := strconv.Atoi(os.Args[2])
+	data := mssg.Connect{1, uint32(id), 0}
 	wReq := new(mssg.WorkReq)
 
-	if len(args) != 2 {
-		fmt.Println("usage is <ip:port>")
+	if len(args) != 3 {
+		fmt.Println("usage is <ip:port> <id>")
 		os.Exit(1)
 	}
 
@@ -32,12 +40,12 @@ func main() {
 	dec := gob.NewDecoder(conn)
 	enc.Encode(data)
 	for {
-		err = dec.Decode(wReq)
+		dec.Decode(wReq)
 		if err != nil {
 			fmt.Println("wrong send 1?")
 		}
 		fmt.Printf("type %u, arg1 %s, host %s\n", wReq.Type, wReq.Arg1, wReq.WId)
-		wResp := mssg.WorkResp{1, 1, []byte("You win my the data!"), wReq.WId, 10}
+		wResp := mssg.WorkResp{1, 1, []byte("You win my the data!\n"), wReq.WId, 10}
 		err = enc.Encode(wResp)
 		if err != nil {
 			fmt.Println("wrong send 2?")
