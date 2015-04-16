@@ -46,11 +46,8 @@ func main() {
 	}
 
 	r.HandleFunc("/api/{type}/{arg1}", func(w http.ResponseWriter, r *http.Request) {
-		var id uint32
 		typ, _ := strconv.Atoi(mux.Vars(r)["type"])
-		id, ids = ids[0], ids[1:] // get a free work id
-		jobs[id] = w              // put http writer in map
-		AddReqQueue(w, r, ReqQueue, typ, mux.Vars(r)["arg1"], id)
+		AddReqQueue(w, ReqQueue, typ, mux.Vars(r)["arg1"], jobs, ids)
 	}).Methods("get")
 
 	// Place rest of routes here
@@ -131,9 +128,10 @@ func RecvWork(conn net.Conn, workers map[uint32]Queue, RespQueue chan mssg.WorkR
 func SendResp(RespQueue chan mssg.WorkResp, jobs map[uint32]http.ResponseWriter) {
 	for {
 		resp := <-RespQueue
+		jobs[resp.WId].Header().Set("Content-Type", "text/plain")
 		fmt.Println("Sending response to Host")
 		fmt.Println(string(resp.Data))
-		// jobs[resp.WId].Header().Set("Content-Length", strconv.Itoa(50))
+		jobs[resp.WId].Header().Set("Content-Length", "5000000000000000")
 		_, err := jobs[resp.WId].Write(resp.Data) // ERROR IS COMING FROM HERE
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
@@ -143,7 +141,11 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs map[uint32]http.ResponseWriter)
 }
 
 // Add req struct to a channel
-func AddReqQueue(w http.ResponseWriter, r *http.Request, ReqQueue chan mssg.WorkReq, typ int, arg1 string, id uint32) {
+func AddReqQueue(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg1 string, jobs map[uint32]http.ResponseWriter, ids []uint32) {
+	var id uint32
+	id, ids = ids[0], ids[1:] // get a free work id
+	jobs[id] = w
+	// jobs[id].Write([]byte("WHAT THE FUCK")) // this works...
 	fmt.Println("Adding req to queue")
 	ReqQueue <- mssg.WorkReq{Type: uint8(typ), Arg1: arg1, WId: id}
 }
