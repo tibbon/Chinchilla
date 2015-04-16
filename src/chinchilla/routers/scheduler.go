@@ -3,6 +3,7 @@ package main
 import (
 	"chinchilla/mssg"
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	"net"
@@ -49,7 +50,7 @@ func main() {
 	r.HandleFunc("/api/{type}/{arg1}", func(w http.ResponseWriter, r *http.Request) {
 		var id uint32
 		typ, _ := strconv.Atoi(mux.Vars(r)["type"])
-		id, ids = ids[0], ids[1:] // get a free work id
+		id, ids = ids[0], ids[1:] // get a free work id (ultimately this is load distribution)
 		jobs[id] = w
 		AddReqQueue(w, ReqQueue, typ, mux.Vars(r)["arg1"], id)
 		time.Sleep(1000 * time.Millisecond)
@@ -134,7 +135,9 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs map[uint32]http.ResponseWriter)
 	for {
 		resp := <-RespQueue
 		fmt.Println("Sending response to Host")
-		_, err := jobs[resp.WId].Write(resp.Data)
+		json_resp, _ := json.Marshal(resp)
+		fmt.Println(resp.Data)
+		_, err := jobs[resp.WId].Write(json_resp)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
 			os.Exit(1)

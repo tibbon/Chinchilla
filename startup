@@ -1,4 +1,4 @@
-pkill -f "$1"                         # kill exiting servers of the same type on this machine
+pkill -f "$1 $2"                      # kill exiting servers of the same type on this machine
 git pull origin master                # update code
 go build src/chinchilla/routers/$1.go # build startup script
 ./$1 $2 $3                              #run startup 
