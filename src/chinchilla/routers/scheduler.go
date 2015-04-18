@@ -19,6 +19,7 @@ const poolSize = 15
 type Queue struct {
 	QVal uint32
 	Enc  *gob.Encoder
+	Sent bool
 }
 type Job struct {
 	W   http.ResponseWriter
@@ -124,7 +125,7 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 
 	if header.Type == 1 && header.Id != 0 {
 		workers.l.Lock()
-		workers.m[header.Id] = Queue{header.QVal, enc} // Need to make thread safe
+		workers.m[header.Id] = Queue{header.QVal, enc, false} // Need to make thread safe
 		workers.l.Unlock()
 		fmt.Print("Added Worker connection to map\n")
 
@@ -164,7 +165,6 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs *MapJ) {
 		// fmt.Println(resp.Data)
 		jobs.l.Lock()
 		_, err := jobs.m[resp.WId].W.Write(json_resp)
-		fmt.Println("Got here")
 		jobs.m[resp.WId].Mtx.Unlock()
 		jobs.l.Unlock()
 		if err != nil {
@@ -189,8 +189,9 @@ func SendWorkReq(ReqQueue chan mssg.WorkReq, workers *MapQ) {
 	for {
 		req := <-ReqQueue
 		fmt.Println("Sending work request")
+		node := RoundRobin(workers)
 		workers.l.RLock()
-		err := workers.m[1].Enc.Encode(req)
+		err := workers.m[node].Enc.Encode(req)
 		workers.l.RUnlock()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
@@ -198,4 +199,27 @@ func SendWorkReq(ReqQueue chan mssg.WorkReq, workers *MapQ) {
 		fmt.Println("Sent work Request")
 
 	}
+}
+
+func RoundRobin(workers *MapQ) uint32 {
+	for k, v := range workers.m {
+		workers.l.Lock()
+		if !workers.m[k].Sent {
+			v.Sent = false
+			workers.m[k] = v
+			workers.l.Unlock()
+			return k
+		}
+		workers.l.Unlock()
+	}
+	for k, v := range workers.m {
+		workers.l.Lock()
+		v.Sent = false
+		workers.m[k] = v
+		workers.l.Unlock()
+	}
+	for k, _ := range workers.m {
+		return k
+	}
+	return 0
 }
