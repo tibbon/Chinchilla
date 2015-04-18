@@ -35,6 +35,11 @@ type MapQ struct {
 	l *sync.RWMutex
 }
 
+type Stack struct {
+	s []uint32
+	l *sync.RWMutex
+}
+
 func checkError(err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
@@ -56,16 +61,18 @@ func main() {
 
 	jobs := &MapJ{make(map[uint32]Job), new(sync.RWMutex)}
 	// nodeQs := make(map[uint32][])
-	ids := make([]uint32, 10000) // make extensible later
+	ids := &Stack{make([]uint32, 10000), new(sync.RWMutex)} // make extensible later
 
 	for i := 0; i < 10000; i++ {
-		ids[i] = uint32(i)
+		ids.s[i] = uint32(i)
 	}
 
 	r.HandleFunc("/api/{type}/{arg1}", func(w http.ResponseWriter, r *http.Request) {
 		var id uint32
 		typ, _ := strconv.Atoi(mux.Vars(r)["type"])
-		id, ids = ids[0], ids[1:] // get a free work id (ultimately this is load distribution)
+		ids.l.Lock()
+		id, ids.s = ids.s[0], ids.s[1:] // get a free work id (ultimately this is load distribution)
+		ids.l.Unlock()
 		AddReqQueue(w, ReqQueue, typ, mux.Vars(r)["arg1"], id, jobs)
 		jobs.m[id].Mtx.Lock() // potential map corruption?
 	}).Methods("get")
