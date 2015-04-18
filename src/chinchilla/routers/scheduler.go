@@ -78,8 +78,6 @@ func main() {
 		jobs.m[id].Mtx.Lock() // potential map corruption?
 	}).Methods("get")
 
-	// Place rest of routes here
-
 	go AcceptWorkers(ReqQueue, jobs)
 
 	http.Handle("/", r)
@@ -164,6 +162,7 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs *MapJ) {
 		json_resp, _ := json.Marshal(resp)
 		// fmt.Println(resp.Data)
 		jobs.l.Lock()
+		jobs.m[resp.WId].W.WriteHeader(http.StatusOK)
 		_, err := jobs.m[resp.WId].W.Write(json_resp)
 		jobs.m[resp.WId].Mtx.Unlock()
 		jobs.l.Unlock()
