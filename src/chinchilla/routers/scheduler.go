@@ -161,17 +161,18 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs *MapJ) {
 
 		fmt.Println("Sending response to Host")
 		json_resp, _ := json.Marshal(resp)
+		// fmt.Println(resp.Data)
+		jobs.l.Lock()
+		w := jobs.m[resp.WId].W
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(200)
+
 		// allow cross domain AJAX requests
 
-		jobs.l.Lock()
-		w := jobs.m[resp.WId].W
 		_, err := w.Write(json_resp)
 		jobs.m[resp.WId].Mtx.Unlock()
 		jobs.l.Unlock()
-
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
 			os.Exit(1)
