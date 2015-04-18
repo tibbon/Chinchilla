@@ -226,9 +226,6 @@ func RoundRobin(workers *MapQ) uint32 {
 
 	for k, v := range workers.m {
 		workers.l.Lock()
-		for i := 0; i < len(v.Reqs); i++ {
-			fmt.Printf("WID is %s", v.Reqs[i].Arg1)
-		}
 		if !workers.m[k].Sent {
 			v.Sent = true
 			workers.m[k] = v
