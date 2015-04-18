@@ -212,7 +212,7 @@ func RoundRobin(workers *MapQ) uint32 {
 	for k, v := range workers.m {
 		workers.l.Lock()
 		if !workers.m[k].Sent {
-			v.Sent = false
+			v.Sent = true
 			workers.m[k] = v
 			workers.l.Unlock()
 			return k
@@ -225,7 +225,9 @@ func RoundRobin(workers *MapQ) uint32 {
 		workers.m[k] = v
 		workers.l.Unlock()
 	}
-	for k, _ := range workers.m {
+	for k, v := range workers.m {
+		v.Sent = true
+		workers.m[k] = v
 		return k
 	}
 	return 0
