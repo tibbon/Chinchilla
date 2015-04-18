@@ -42,13 +42,14 @@ func main() {
 
 	enc.Encode(data)
 	for {
-		dec.Decode(wReq)
+		err := dec.Decode(wReq)
+		if err != nil {
+			conn.Close()
+			return
+		}
 		fmt.Printf("type %u, arg1 %s, host %s\n", wReq.Type, wReq.Arg1, wReq.WId)
 		wResp := mssg.WorkResp{1, 1, *data_struct, wReq.WId, 10}
-		err = enc.Encode(wResp)
-		if err != nil {
-			fmt.Println("wrong send 2?")
-		}
+		enc.Encode(wResp)
 	}
 
 }

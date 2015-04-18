@@ -11,7 +11,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
+	"sync"
 )
 
 const poolSize = 15
@@ -19,6 +19,10 @@ const poolSize = 15
 type Queue struct {
 	QVal uint32
 	Enc  *gob.Encoder
+}
+type Job struct {
+	W   http.ResponseWriter
+	Mtx *sync.Mutex
 }
 
 func checkError(err error) {
@@ -40,7 +44,8 @@ func main() {
 	ReqQueue := make(chan mssg.WorkReq)
 	r := mux.NewRouter()
 
-	jobs := make(map[uint32]http.ResponseWriter)
+	jobs := make(map[uint32]Job)
+	// nodeQs := make(map[uint32][])
 	ids := make([]uint32, 10000) // make extensible later
 
 	for i := 0; i < 10000; i++ {
@@ -51,9 +56,8 @@ func main() {
 		var id uint32
 		typ, _ := strconv.Atoi(mux.Vars(r)["type"])
 		id, ids = ids[0], ids[1:] // get a free work id (ultimately this is load distribution)
-		jobs[id] = w
-		AddReqQueue(w, ReqQueue, typ, mux.Vars(r)["arg1"], id)
-		time.Sleep(1000 * time.Millisecond)
+		AddReqQueue(w, ReqQueue, typ, mux.Vars(r)["arg1"], id, jobs)
+		jobs[id].Mtx.Lock()
 	}).Methods("get")
 
 	// Place rest of routes here
@@ -64,7 +68,7 @@ func main() {
 	http.ListenAndServe(portno, nil)
 }
 
-func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs map[uint32]http.ResponseWriter) {
+func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs map[uint32]Job) {
 	portno := strings.Join([]string{":", os.Args[2]}, "")
 
 	ln, err := net.Listen("tcp", portno)
@@ -131,13 +135,14 @@ func RecvWork(conn net.Conn, workers map[uint32]Queue, RespQueue chan mssg.WorkR
 }
 
 // Thread to send responses back to hosts
-func SendResp(RespQueue chan mssg.WorkResp, jobs map[uint32]http.ResponseWriter) {
+func SendResp(RespQueue chan mssg.WorkResp, jobs map[uint32]Job) {
 	for {
 		resp := <-RespQueue
 		fmt.Println("Sending response to Host")
 		json_resp, _ := json.Marshal(resp)
 		fmt.Println(resp.Data)
-		_, err := jobs[resp.WId].Write(json_resp)
+		_, err := jobs[resp.WId].W.Write(json_resp)
+		jobs[resp.WId].Mtx.Unlock()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
 			os.Exit(1)
@@ -147,8 +152,9 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs map[uint32]http.ResponseWriter)
 }
 
 // Add req struct to a channel
-func AddReqQueue(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg1 string, id uint32) {
-	// jobs[id].Write([]byte("WHAT THE FUCK")) // this works...
+func AddReqQueue(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg1 string, id uint32, jobs map[uint32]Job) {
+	jobs[id] = Job{W: w, Mtx: &sync.Mutex{}}
+	jobs[id].Mtx.Lock()
 	fmt.Println("Adding req to queue")
 	ReqQueue <- mssg.WorkReq{Type: uint8(typ), Arg1: arg1, WId: id}
 }
