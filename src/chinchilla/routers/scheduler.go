@@ -25,6 +25,16 @@ type Job struct {
 	Mtx *sync.Mutex
 }
 
+type MapJ struct {
+	m map[uint32]Job
+	l *sync.RWMutex
+}
+
+type MapQ struct {
+	m map[uint32]Queue
+	l *sync.RWMutex
+}
+
 func checkError(err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
@@ -44,7 +54,7 @@ func main() {
 	ReqQueue := make(chan mssg.WorkReq)
 	r := mux.NewRouter()
 
-	jobs := make(map[uint32]Job)
+	jobs := MapJ{make(map[uint32]Job), new(sync.RWMutex)}
 	// nodeQs := make(map[uint32][])
 	ids := make([]uint32, 10000) // make extensible later
 
@@ -57,7 +67,9 @@ func main() {
 		typ, _ := strconv.Atoi(mux.Vars(r)["type"])
 		id, ids = ids[0], ids[1:] // get a free work id (ultimately this is load distribution)
 		AddReqQueue(w, ReqQueue, typ, mux.Vars(r)["arg1"], id, jobs)
-		jobs[id].Mtx.Lock()
+		jobs.l.Lock()
+		jobs.m[id].Mtx.Lock()
+		jobs.l.UnLock()
 	}).Methods("get")
 
 	// Place rest of routes here
@@ -68,13 +80,13 @@ func main() {
 	http.ListenAndServe(portno, nil)
 }
 
-func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs map[uint32]Job) {
+func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs *MapJ) {
 	portno := strings.Join([]string{":", os.Args[2]}, "")
 
 	ln, err := net.Listen("tcp", portno)
 	checkError(err)
 
-	workers := make(map[uint32]Queue)
+	workers := MapQ{make(map[uint32]Queue), new(sync.RWMutex)}
 	RespQueue := make(chan mssg.WorkResp)
 
 	go SendWorkReq(ReqQueue, workers)
@@ -95,7 +107,7 @@ func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs map[uint32]Job) {
 	}
 }
 
-func RecvWork(conn net.Conn, workers map[uint32]Queue, RespQueue chan mssg.WorkResp) {
+func RecvWork(conn net.Conn, workers *Map, RespQueue chan mssg.WorkResp) {
 
 	header := new(mssg.Connect)
 	resp := new(mssg.WorkResp)
@@ -106,7 +118,9 @@ func RecvWork(conn net.Conn, workers map[uint32]Queue, RespQueue chan mssg.WorkR
 	dec.Decode(header)
 
 	if header.Type == 1 && header.Id != 0 {
-		workers[header.Id] = Queue{header.QVal, enc} // Need to make thread safe
+		workers.l.Lock()
+		workers.m[header.Id] = Queue{header.QVal, enc} // Need to make thread safe
+		workers.l.UnLock()
 		fmt.Print("Added Worker connection to map\n")
 
 	} else {
@@ -125,7 +139,9 @@ func RecvWork(conn net.Conn, workers map[uint32]Queue, RespQueue chan mssg.WorkR
 		fmt.Println("Received work response")
 		if resp.Type == 0 {
 			conn.Close()
-			delete(workers, resp.Id)
+			workers.l.Lock()
+			delete(workers.m, resp.Id)
+			workers.l.UnLock()
 			return
 		} else {
 			RespQueue <- *resp
@@ -135,14 +151,16 @@ func RecvWork(conn net.Conn, workers map[uint32]Queue, RespQueue chan mssg.WorkR
 }
 
 // Thread to send responses back to hosts
-func SendResp(RespQueue chan mssg.WorkResp, jobs map[uint32]Job) {
+func SendResp(RespQueue chan mssg.WorkResp, jobs *Map) {
 	for {
 		resp := <-RespQueue
 		fmt.Println("Sending response to Host")
 		json_resp, _ := json.Marshal(resp)
-		fmt.Println(resp.Data)
-		_, err := jobs[resp.WId].W.Write(json_resp)
+		// fmt.Println(resp.Data)
+		jobs.l.Lock()
+		_, err := jobs.m[resp.WId].W.Write(json_resp)
 		jobs[resp.WId].Mtx.Unlock()
+		jobs.l.Unlock()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
 			os.Exit(1)
@@ -152,18 +170,22 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs map[uint32]Job) {
 }
 
 // Add req struct to a channel
-func AddReqQueue(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg1 string, id uint32, jobs map[uint32]Job) {
-	jobs[id] = Job{W: w, Mtx: &sync.Mutex{}}
-	jobs[id].Mtx.Lock()
+func AddReqQueue(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg1 string, id uint32, jobs *Map) {
+	jobs.l.Lock()
+	jobs.m[id] = Job{W: w, Mtx: &sync.Mutex{}}
+	jobs.m[id].Mtx.Lock()
+	jobs.l.Unlock()
 	fmt.Println("Adding req to queue")
 	ReqQueue <- mssg.WorkReq{Type: uint8(typ), Arg1: arg1, WId: id}
 }
 
-func SendWorkReq(ReqQueue chan mssg.WorkReq, workers map[uint32]Queue) {
+func SendWorkReq(ReqQueue chan mssg.WorkReq, workers *Map) {
 	for {
 		req := <-ReqQueue
 		fmt.Println("Sending work request")
-		err := workers[1].Enc.Encode(req)
+		workers.l.RLock()
+		err := workers.m[1].Enc.Encode(req)
+		workers.l.Unlock()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
 		}
