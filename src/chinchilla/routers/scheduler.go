@@ -54,7 +54,7 @@ func main() {
 	ReqQueue := make(chan mssg.WorkReq)
 	r := mux.NewRouter()
 
-	jobs := MapJ{make(map[uint32]Job), new(sync.RWMutex)}
+	jobs := &MapJ{make(map[uint32]Job), new(sync.RWMutex)}
 	// nodeQs := make(map[uint32][])
 	ids := make([]uint32, 10000) // make extensible later
 
@@ -67,9 +67,7 @@ func main() {
 		typ, _ := strconv.Atoi(mux.Vars(r)["type"])
 		id, ids = ids[0], ids[1:] // get a free work id (ultimately this is load distribution)
 		AddReqQueue(w, ReqQueue, typ, mux.Vars(r)["arg1"], id, jobs)
-		jobs.l.Lock()
-		jobs.m[id].Mtx.Lock()
-		jobs.l.UnLock()
+		jobs.m[id].Mtx.Lock() // potential map corruption?
 	}).Methods("get")
 
 	// Place rest of routes here
@@ -86,7 +84,7 @@ func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs *MapJ) {
 	ln, err := net.Listen("tcp", portno)
 	checkError(err)
 
-	workers := MapQ{make(map[uint32]Queue), new(sync.RWMutex)}
+	workers := &MapQ{make(map[uint32]Queue), new(sync.RWMutex)}
 	RespQueue := make(chan mssg.WorkResp)
 
 	go SendWorkReq(ReqQueue, workers)
@@ -107,7 +105,7 @@ func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs *MapJ) {
 	}
 }
 
-func RecvWork(conn net.Conn, workers *Map, RespQueue chan mssg.WorkResp) {
+func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 
 	header := new(mssg.Connect)
 	resp := new(mssg.WorkResp)
@@ -120,7 +118,7 @@ func RecvWork(conn net.Conn, workers *Map, RespQueue chan mssg.WorkResp) {
 	if header.Type == 1 && header.Id != 0 {
 		workers.l.Lock()
 		workers.m[header.Id] = Queue{header.QVal, enc} // Need to make thread safe
-		workers.l.UnLock()
+		workers.l.Unlock()
 		fmt.Print("Added Worker connection to map\n")
 
 	} else {
@@ -141,7 +139,7 @@ func RecvWork(conn net.Conn, workers *Map, RespQueue chan mssg.WorkResp) {
 			conn.Close()
 			workers.l.Lock()
 			delete(workers.m, resp.Id)
-			workers.l.UnLock()
+			workers.l.Unlock()
 			return
 		} else {
 			RespQueue <- *resp
@@ -151,7 +149,7 @@ func RecvWork(conn net.Conn, workers *Map, RespQueue chan mssg.WorkResp) {
 }
 
 // Thread to send responses back to hosts
-func SendResp(RespQueue chan mssg.WorkResp, jobs *Map) {
+func SendResp(RespQueue chan mssg.WorkResp, jobs *MapJ) {
 	for {
 		resp := <-RespQueue
 		fmt.Println("Sending response to Host")
@@ -159,7 +157,8 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs *Map) {
 		// fmt.Println(resp.Data)
 		jobs.l.Lock()
 		_, err := jobs.m[resp.WId].W.Write(json_resp)
-		jobs[resp.WId].Mtx.Unlock()
+		fmt.Println("Got here")
+		jobs.m[resp.WId].Mtx.Unlock()
 		jobs.l.Unlock()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
@@ -170,7 +169,7 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs *Map) {
 }
 
 // Add req struct to a channel
-func AddReqQueue(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg1 string, id uint32, jobs *Map) {
+func AddReqQueue(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg1 string, id uint32, jobs *MapJ) {
 	jobs.l.Lock()
 	jobs.m[id] = Job{W: w, Mtx: &sync.Mutex{}}
 	jobs.m[id].Mtx.Lock()
@@ -179,13 +178,13 @@ func AddReqQueue(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg
 	ReqQueue <- mssg.WorkReq{Type: uint8(typ), Arg1: arg1, WId: id}
 }
 
-func SendWorkReq(ReqQueue chan mssg.WorkReq, workers *Map) {
+func SendWorkReq(ReqQueue chan mssg.WorkReq, workers *MapQ) {
 	for {
 		req := <-ReqQueue
 		fmt.Println("Sending work request")
 		workers.l.RLock()
 		err := workers.m[1].Enc.Encode(req)
-		workers.l.Unlock()
+		workers.l.RUnlock()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
 		}
