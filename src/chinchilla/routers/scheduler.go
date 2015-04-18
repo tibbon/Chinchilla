@@ -156,6 +156,7 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs *MapJ) {
 		json_resp, _ := json.Marshal(resp)
 		// fmt.Println(resp.Data)
 		jobs.l.Lock()
+		jobs.m[resp.WId].W.WriteHeader(http.StatusOK)
 		_, err := jobs.m[resp.WId].W.Write(json_resp)
 		fmt.Println("Got here")
 		jobs.m[resp.WId].Mtx.Unlock()

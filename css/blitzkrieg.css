@@ -1,0 +1,16 @@
+.chinchilla-body .blitzkrieg-button {
+  width: intrinsic;
+  padding: 10px;
+  border: 1px solid #111;
+  transition: 0.5s background ease;
+}
+.chinchilla-body .blitzkrieg-button p {
+  color: #111;
+  transition: 0.5s color ease;
+}
+.chinchilla-body .blitzkrieg-button:hover {
+  background: #111;
+}
+.chinchilla-body .blitzkrieg-button:hover p {
+  color: #eee;
+}

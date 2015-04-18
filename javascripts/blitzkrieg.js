@@ -7,12 +7,13 @@ var Blitzkrieg = function() {
         sendRequest: function() {
             
             $.ajax({
-                url: "localhost:9000/api/work/1",
+                url: "http://localhost:9000/api/work/1",
                 type: "GET",
+                dataType: "json",
                 success: function(data) {
                     console.log(data);
                 },
-                failure: function(data) {
+                error: function(data) {
                     console.log(data);
                 }
             })
@@ -26,6 +27,10 @@ var Blitzkrieg = function() {
 }
 
 $(function() {
+
     var b = Blitzkrieg();
-    b.sendRequest();
+    $(".blitzkrieg-button").on("click", function() {
+        b.sendRequest();    
+    })
+
 })
