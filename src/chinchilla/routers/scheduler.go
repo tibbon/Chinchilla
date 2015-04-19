@@ -102,12 +102,10 @@ func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs *MapJ) {
 	}
 
 	for {
-		fmt.Println("Waiting to Accept worker")
 		conn, err := ln.Accept()
 		if err != nil {
 			continue
 		} else {
-			fmt.Println("Adding worker")
 			go RecvWork(conn, workers, RespQueue)
 		}
 	}
@@ -127,7 +125,6 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 		workers.l.Lock()
 		workers.m[header.Id] = Queue{header.QVal, enc, false, make([]mssg.WorkReq, 0)}
 		workers.l.Unlock()
-		fmt.Print("Added Worker connection to map\n")
 
 	} else {
 		conn.Close()
@@ -141,7 +138,6 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 			conn.Close()
 			return
 		}
-		fmt.Println("Received work response")
 		if resp.Type == 0 {
 			conn.Close()
 			workers.l.Lock()
@@ -151,9 +147,8 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 		} else {
 			RespQueue <- *resp
 			t := time.Since(resp.RTime)
-			fmt.Printf("time in is %f", time.Duration.Seconds(t))
 			workers.l.Lock()
-			fmt.Printf("Queue length for %u is %u", resp.Id, len(workers.m[resp.Id].Reqs))
+			fmt.Printf("Queue length for %d is %d\n", resp.Id, len(workers.m[resp.Id].Reqs))
 			tmp := workers.m[resp.Id]
 			if len(workers.m[resp.Id].Reqs) != 0 {
 				tmp.Reqs = workers.m[resp.Id].Reqs[1:]
@@ -170,7 +165,6 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs *MapJ) {
 	for {
 		resp := <-RespQueue
 
-		fmt.Println("Sending response to Host")
 		json_resp, _ := json.Marshal(resp)
 		// fmt.Println(resp.Data)
 		jobs.l.Lock()
@@ -198,7 +192,6 @@ func AddReqQueue(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg
 	jobs.m[id] = Job{W: w, Mtx: &sync.Mutex{}}
 	jobs.m[id].Mtx.Lock()
 	jobs.l.Unlock()
-	fmt.Println("Adding req to queue")
 	ReqQueue <- mssg.WorkReq{Type: uint8(typ), Arg1: arg1, WId: id, STime: time.Now()}
 }
 
@@ -206,7 +199,7 @@ func SendWorkReq(ReqQueue chan mssg.WorkReq, workers *MapQ) {
 	for {
 		req := <-ReqQueue
 		node := RoundRobin(workers)
-		fmt.Printf("Sending work request to node %u", node)
+		// fmt.Printf("Sending work request to node %u", node)
 		workers.l.Lock()
 		tmp := workers.m[node]
 		tmp.Reqs = append(workers.m[node].Reqs, req)
@@ -216,16 +209,16 @@ func SendWorkReq(ReqQueue chan mssg.WorkReq, workers *MapQ) {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
 		}
-		fmt.Println("Sent work Request")
-		for k, v := range workers.m {
-			workers.l.Lock()
-			fmt.Printf("Worker %u", k)
-			for i := 0; i < len(v.Reqs); i++ {
-				fmt.Printf("%s ", v.Reqs[i].Arg1)
-			}
-			fmt.Println("")
-			workers.l.Unlock()
-		}
+		// fmt.Println("Sent work Request")
+		// for k, v := range workers.m {
+		// 	workers.l.Lock()
+		// 	fmt.Printf("Worker %u", k)
+		// 	for i := 0; i < len(v.Reqs); i++ {
+		// 		fmt.Printf("%s ", v.Reqs[i].Arg1)
+		// 	}
+		// 	fmt.Println("")
+		// 	workers.l.Unlock()
+		// }
 
 	}
 }
