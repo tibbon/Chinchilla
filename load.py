@@ -9,7 +9,7 @@ for x in xrange(1,3):
     session.get('http://localhost:8080/api/1/hello')
     session.get('http://localhost:8080/api/2/hello')
     session.get('http://localhost:8080/api/3/hello')
-time.sleep(4)
+time.sleep(6)
 
 for x in xrange(1,3):
     session.get('http://localhost:8080/api/1/hello')

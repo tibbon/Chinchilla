@@ -160,7 +160,7 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 			}
 			workers.m[header.Id].avgTimes[resp.Type] = t
 			tmp = workers.m[header.Id]
-			tmp.QVal -= t
+			tmp.QVal -= t - .1
 			if tmp.QVal < 0.0 {
 				tmp.QVal = 0
 			}
@@ -266,14 +266,13 @@ func ShortestQ(workers *MapQ, typ uint8) uint32 {
 			}
 		}
 		fmt.Printf("node %d has a QVal of %f\n", k, v.QVal)
-
 	}
 	for k, v := range workers.m[node].avgTimes {
 		fmt.Printf("type %d has qval of %f\n", k, v)
 	}
 	workers.l.Lock()
 	tmp := workers.m[node]
-	tmp.QVal += workers.m[node].avgTimes[typ]
+	tmp.QVal += workers.m[node].avgTimes[typ] + .1
 	workers.m[node] = tmp
 	workers.l.Unlock()
 	fmt.Printf("chose node %d\n", node)
