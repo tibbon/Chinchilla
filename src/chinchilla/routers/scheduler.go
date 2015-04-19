@@ -74,6 +74,7 @@ func main() {
 	}
 
 	r.HandleFunc("/api/{type}/{arg1}", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("received request")
 		var id uint32
 		typ, _ := strconv.Atoi(mux.Vars(r)["type"])
 		ids.l.Lock()
@@ -87,6 +88,10 @@ func main() {
 
 	http.Handle("/", r)
 	http.ListenAndServe(portno, nil)
+}
+
+func Test(w http.ResponseWriter, r *http.Request, ReqQueue chan mssg.WorkReq, jobs map[uint32]Job, ids []uint32) {
+
 }
 
 func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs *MapJ) {
@@ -121,7 +126,7 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 	gob.Register(mssg.WorkReq{})
 	enc := gob.NewEncoder(conn)
 	dec := gob.NewDecoder(conn)
-	avgTimes := make(map[uint8]int64)
+	avgTimes := make(map[uint8]float64)
 	dec.Decode(header)
 
 	if header.Type == 1 && header.Id != 0 {
@@ -149,7 +154,7 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 			return
 		} else {
 			RespQueue <- *resp
-			t := time.Since(resp.RTime)
+			t := resp.RTime
 			workers.l.Lock()
 			fmt.Printf("Queue length for %d is %d\n", resp.Id, len(workers.m[resp.Id].Reqs))
 			tmp := workers.m[resp.Id]
@@ -158,7 +163,7 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 				workers.m[resp.Id] = tmp
 			}
 			workers.l.Unlock()
-			avgTimes[resp.Type] = time.Duration.Nanoseconds(t) // Add weighted avg function
+			avgTimes[resp.Type] = t // Add weighted avg function
 		}
 	}
 }
@@ -169,14 +174,12 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs *MapJ) {
 		resp := <-RespQueue
 
 		json_resp, _ := json.Marshal(resp)
-		// fmt.Println(resp.Data)
 		jobs.l.Lock()
 		w := jobs.m[resp.WId].W
+		// allow cross domain AJAX requests
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(200)
-
-		// allow cross domain AJAX requests
 
 		_, err := w.Write(json_resp)
 		jobs.m[resp.WId].Mtx.Unlock()
