@@ -66,7 +66,6 @@ func main() {
 	r := mux.NewRouter()
 
 	jobs := &MapJ{make(map[uint32]Job), new(sync.RWMutex)}
-	// nodeQs := make(map[uint32][])
 	ids := &Stack{make([]uint32, 10000), new(sync.RWMutex)} // make extensible later
 
 	for i := 0; i < 10000; i++ {
@@ -170,15 +169,11 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs *MapJ) {
 	for {
 		resp := <-RespQueue
 		json_resp, _ := json.Marshal(resp)
-		// fmt.Println(resp.Data)
 		jobs.l.Lock()
 		w := jobs.m[resp.WId].W
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(200)
-
-		// allow cross domain AJAX requests
-
 		_, err := w.Write(json_resp)
 		jobs.l.Unlock()
 		close(jobs.m[resp.WId].Sem)
