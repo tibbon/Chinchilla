@@ -9,7 +9,8 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strconv"
+	// "strconv"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -27,7 +28,7 @@ type Queue struct {
 }
 type Job struct {
 	W   http.ResponseWriter
-	Mtx *sync.Mutex
+	Sem chan struct{}
 }
 
 type MapJ struct {
@@ -73,20 +74,31 @@ func main() {
 		ids.s[i] = uint32(i)
 	}
 
-	r.HandleFunc("/api/{type}/{arg1}", func(w http.ResponseWriter, r *http.Request) {
-		var id uint32
-		typ, _ := strconv.Atoi(mux.Vars(r)["type"])
-		ids.l.Lock()
-		id, ids.s = ids.s[0], ids.s[1:] // get a free work id (ultimately this is load distribution)
-		ids.l.Unlock()
-		AddReqQueue(w, ReqQueue, typ, mux.Vars(r)["arg1"], id, jobs)
-		jobs.m[id].Mtx.Lock() // potential map corruption?
-	}).Methods("get")
+	r.HandleFunc("/api/{type}/{arg1}", handleR).Methods("get")
+	// func(w http.ResponseWriter, r *http.Request) {
+	// fmt.Println("got hurr")
+	// time.Sleep(1500 * time.Millisecond)
+	// w.Write([]byte("fuck you"))
+	// fmt.Println("Done Write")
+	// var id uint32
+	// typ, _ := strconv.Atoi(mux.Vars(r)["type"])
+	// ids.l.Lock()
+	// id, ids.s = ids.s[0], ids.s[1:] // get a free work id (ultimately this is load distribution)
+	// ids.l.Unlock()
+	// AddReqQueue(w, ReqQueue, typ, mux.Vars(r)["arg1"], id, jobs)
+	// fmt.Printf("got here with id %d\n", id)
+	// <-jobs.m[id].Sem
 
 	go AcceptWorkers(ReqQueue, jobs)
 
 	http.Handle("/", r)
-	http.ListenAndServe(portno, nil)
+	log.Fatal(http.ListenAndServe(portno, nil))
+}
+func handleR(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("got hurr")
+	time.Sleep(1500 * time.Millisecond)
+	w.Write([]byte("fuck you"))
+	fmt.Println("Done Write")
 }
 
 func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs *MapJ) {
@@ -167,7 +179,7 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 func SendResp(RespQueue chan mssg.WorkResp, jobs *MapJ) {
 	for {
 		resp := <-RespQueue
-
+		fmt.Println("Sending resp")
 		json_resp, _ := json.Marshal(resp)
 		// fmt.Println(resp.Data)
 		jobs.l.Lock()
@@ -179,8 +191,8 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs *MapJ) {
 		// allow cross domain AJAX requests
 
 		_, err := w.Write(json_resp)
-		jobs.m[resp.WId].Mtx.Unlock()
 		jobs.l.Unlock()
+		close(jobs.m[resp.WId].Sem)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
 			os.Exit(1)
@@ -192,12 +204,12 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs *MapJ) {
 // Add req struct to a channel
 func AddReqQueue(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg1 string, id uint32, jobs *MapJ) {
 	jobs.l.Lock()
-	jobs.m[id] = Job{W: w, Mtx: &sync.Mutex{}}
+	jobs.m[id] = Job{W: w, Sem: make(chan struct{})}
 	Counter += 1
 	fmt.Println(Counter)
-	jobs.m[id].Mtx.Lock()
 	jobs.l.Unlock()
 	ReqQueue <- mssg.WorkReq{Type: uint8(typ), Arg1: arg1, WId: id, STime: time.Now()}
+
 }
 
 func SendWorkReq(ReqQueue chan mssg.WorkReq, workers *MapQ) {
