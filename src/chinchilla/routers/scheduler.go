@@ -62,7 +62,7 @@ func main() {
 	}
 	portno := strings.Join([]string{":", args[1]}, "")
 
-	ReqQueue := make(chan mssg.WorkReq)
+	ReqQueue := make(chan mssg.WorkReq, 10000)
 	r := mux.NewRouter()
 
 	jobs := &MapJ{make(map[uint32]Job), new(sync.RWMutex)}
