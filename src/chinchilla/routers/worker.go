@@ -59,7 +59,16 @@ func main() {
 func handleRequest(wReq *mssg.WorkReq, enc *gob.Encoder) {
 
 	data_struct := new(mssg.WorkRespData)
-	work_time := (rand.Float64() * 3) + 0.5
+	work_time := 0.0
+
+	switch wReq.Type {
+	case 1:
+		work_time = (rand.Float64() * 0.5) + 0.05
+	case 2:
+		work_time = (rand.Float64() * 0.75) + 0.5
+	case 3:
+		work_time = (rand.Float64() * 1) + 0.75
+	}
 
 	fmt.Println(work_time)
 
