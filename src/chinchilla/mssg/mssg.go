@@ -5,9 +5,9 @@ import (
 )
 
 type Connect struct {
-	Type uint8  `json:"type"` // Operation
-	Id   uint32 // Node ID
-	QVal uint32 // Value of q (0 is default)
+	Type uint8   `json:"type"` // Operation
+	Id   uint32  // Node ID
+	QVal float64 // Value of q (0 is default)
 }
 
 type WorkReq struct {

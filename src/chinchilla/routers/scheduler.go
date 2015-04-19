@@ -20,10 +20,11 @@ const poolSize = 15
 var Counter int
 
 type Queue struct {
-	QVal uint32
-	Enc  *gob.Encoder
-	Sent bool
-	Reqs []mssg.WorkReq
+	QVal     float64
+	Enc      *gob.Encoder
+	Sent     bool
+	Reqs     []mssg.WorkReq
+	avgTimes map[uint8]float64
 }
 type Job struct {
 	W   http.ResponseWriter
@@ -90,10 +91,6 @@ func main() {
 	http.ListenAndServe(portno, nil)
 }
 
-func Test(w http.ResponseWriter, r *http.Request, ReqQueue chan mssg.WorkReq, jobs map[uint32]Job, ids []uint32) {
-
-}
-
 func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs *MapJ) {
 	portno := strings.Join([]string{":", os.Args[2]}, "")
 
@@ -126,12 +123,11 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 	gob.Register(mssg.WorkReq{})
 	enc := gob.NewEncoder(conn)
 	dec := gob.NewDecoder(conn)
-	avgTimes := make(map[uint8]float64)
 	dec.Decode(header)
 
 	if header.Type == 1 && header.Id != 0 {
 		workers.l.Lock()
-		workers.m[header.Id] = Queue{header.QVal, enc, false, make([]mssg.WorkReq, 0)}
+		workers.m[header.Id] = Queue{header.QVal, enc, false, make([]mssg.WorkReq, 0), make(map[uint8]float64)}
 		workers.l.Unlock()
 
 	} else {
@@ -162,8 +158,15 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 				tmp.Reqs = workers.m[resp.Id].Reqs[1:]
 				workers.m[resp.Id] = tmp
 			}
+			workers.m[header.Id].avgTimes[resp.Type] = t
+			tmp = workers.m[header.Id]
+			tmp.QVal -= t
+			if tmp.QVal < 0.0 {
+				tmp.QVal = 0
+			}
+			workers.m[header.Id] = tmp
 			workers.l.Unlock()
-			avgTimes[resp.Type] = t // Add weighted avg function
+			fmt.Printf("time is %f", t)
 		}
 	}
 }
@@ -179,10 +182,7 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs *MapJ) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(200)
-<<<<<<< HEAD
-=======
 
->>>>>>> f198f2e54a106475ad0235443788b97a0deb4d19
 		_, err := w.Write(json_resp)
 		jobs.l.Unlock()
 		close(jobs.m[resp.WId].Sem)
@@ -201,15 +201,16 @@ func AddReqQueue(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg
 	Counter += 1
 	fmt.Println(Counter)
 	jobs.l.Unlock()
-	ReqQueue <- mssg.WorkReq{Type: uint8(typ), Arg1: arg1, WId: id, STime: time.Now()}
+	ReqQueue <- mssg.WorkReq{Type: uint8(typ), Arg1: arg1, WId: id}
 
 }
 
 func SendWorkReq(ReqQueue chan mssg.WorkReq, workers *MapQ) {
 	for {
 		req := <-ReqQueue
-		node := RoundRobin(workers)
-		// fmt.Printf("Sending work request to node %u", node)
+		req.STime = time.Now()
+		node := ShortestQ(workers, req.Type)
+		// node := RoundRobin(workers)
 		workers.l.Lock()
 		tmp := workers.m[node]
 		tmp.Reqs = append(workers.m[node].Reqs, req)
@@ -219,17 +220,6 @@ func SendWorkReq(ReqQueue chan mssg.WorkReq, workers *MapQ) {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
 		}
-		// fmt.Println("Sent work Request")
-		// for k, v := range workers.m {
-		// 	workers.l.Lock()
-		// 	fmt.Printf("Worker %u", k)
-		// 	for i := 0; i < len(v.Reqs); i++ {
-		// 		fmt.Printf("%s ", v.Reqs[i].Arg1)
-		// 	}
-		// 	fmt.Println("")
-		// 	workers.l.Unlock()
-		// }
-
 	}
 }
 
@@ -257,4 +247,35 @@ func RoundRobin(workers *MapQ) uint32 {
 		return k
 	}
 	return 0
+}
+
+func ShortestQ(workers *MapQ, typ uint8) uint32 {
+	fmt.Println("in shortest Q")
+	first := true
+	var node uint32
+	var min float64
+	for k, v := range workers.m {
+		if first {
+			node = k
+			min = v.QVal
+			first = false
+		} else {
+			if v.QVal <= min {
+				min = v.QVal
+				node = k
+			}
+		}
+		fmt.Printf("node %d has a QVal of %f\n", k, v.QVal)
+
+	}
+	for k, v := range workers.m[node].avgTimes {
+		fmt.Printf("type %d has qval of %f\n", k, v)
+	}
+	workers.l.Lock()
+	tmp := workers.m[node]
+	tmp.QVal += workers.m[node].avgTimes[typ]
+	workers.m[node] = tmp
+	workers.l.Unlock()
+	fmt.Printf("chose node %d\n", node)
+	return node
 }

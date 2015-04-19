@@ -27,7 +27,7 @@ func main() {
 		os.Exit(1)
 	}
 	id, _ := strconv.Atoi(os.Args[2])
-	data := mssg.Connect{1, uint32(id), 0}
+	data := mssg.Connect{1, uint32(id), 0.0}
 	wReq := new(mssg.WorkReq)
 
 	if len(args) != 3 {
@@ -67,7 +67,7 @@ func handleRequest(wReq *mssg.WorkReq, enc *gob.Encoder, id uint32) {
 	case 2:
 		work_time = (rand.Float64() * 0.75) + 0.5
 	case 3:
-		work_time = (rand.Float64() * 1) + 0.75
+		work_time = (rand.Float64() * 2) + 0.75
 	}
 
 	fmt.Println(work_time)
@@ -75,6 +75,6 @@ func handleRequest(wReq *mssg.WorkReq, enc *gob.Encoder, id uint32) {
 	time.Sleep(time.Duration(work_time*1000) * time.Millisecond)
 
 	fmt.Printf("type %u, arg1 %s, host %s\n", wReq.Type, wReq.Arg1, wReq.WId)
-	wResp := mssg.WorkResp{1, id, *data_struct, wReq.WId, float64(time.Duration(time.Since(wReq.STime)).Seconds())}
+	wResp := mssg.WorkResp{wReq.Type, id, *data_struct, wReq.WId, float64(time.Duration(time.Since(wReq.STime)).Seconds())}
 	enc.Encode(wResp)
 }
