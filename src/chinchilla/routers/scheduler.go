@@ -20,6 +20,7 @@ type Queue struct {
 	QVal uint32
 	Enc  *gob.Encoder
 	Sent bool
+	Reqs []mssg.WorkReq
 }
 type Job struct {
 	W   http.ResponseWriter
@@ -123,7 +124,7 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 
 	if header.Type == 1 && header.Id != 0 {
 		workers.l.Lock()
-		workers.m[header.Id] = Queue{header.QVal, enc, false} // Need to make thread safe
+		workers.m[header.Id] = Queue{header.QVal, enc, false, make([]mssg.WorkReq, 1)}
 		workers.l.Unlock()
 		fmt.Print("Added Worker connection to map\n")
 
@@ -149,6 +150,10 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 			return
 		} else {
 			RespQueue <- *resp
+			workers.l.Lock()
+			reqs := workers.m[header.Id].Reqs
+			reqs = reqs[1:]
+			workers.l.Unlock()
 			avgTimes[resp.Type] = resp.RTime // Add weighted avg function
 		}
 	}
@@ -194,20 +199,31 @@ func AddReqQueue(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg
 func SendWorkReq(ReqQueue chan mssg.WorkReq, workers *MapQ) {
 	for {
 		req := <-ReqQueue
-		fmt.Println("Sending work request")
 		node := RoundRobin(workers)
-		workers.l.RLock()
+		fmt.Printf("Sending work request to node %u", node)
+		workers.l.Lock()
+		tmp := workers.m[node]
+		tmp.Reqs = append(workers.m[node].Reqs, req)
+		workers.m[node] = tmp
 		err := workers.m[node].Enc.Encode(req)
-		workers.l.RUnlock()
+		workers.l.Unlock()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
 		}
 		fmt.Println("Sent work Request")
+		for _, v := range workers.m {
+			workers.l.Lock()
+			for i := 0; i < len(v.Reqs); i++ {
+				fmt.Printf("Arg1 %s\n", v.Reqs[i].Arg1)
+			}
+			workers.l.Unlock()
+		}
 
 	}
 }
 
 func RoundRobin(workers *MapQ) uint32 {
+
 	for k, v := range workers.m {
 		workers.l.Lock()
 		if !workers.m[k].Sent {
