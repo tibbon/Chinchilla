@@ -49,7 +49,7 @@ func main() {
 			conn.Close()
 			return
 		}
-		handleRequest(wReq, enc, id)
+		handleRequest(wReq, enc, uint32(id))
 	}
 
 	fmt.Println("here")
