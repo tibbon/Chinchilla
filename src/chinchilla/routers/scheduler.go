@@ -199,8 +199,8 @@ func AddReqQueue(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg
 func SendWorkReq(ReqQueue chan mssg.WorkReq, workers *MapQ) {
 	for {
 		req := <-ReqQueue
-		fmt.Println("Sending work request")
 		node := RoundRobin(workers)
+		fmt.Printf("Sending work request to node %u", node)
 		workers.l.Lock()
 		tmp := workers.m[node]
 		tmp.Reqs = append(workers.m[node].Reqs, req)
