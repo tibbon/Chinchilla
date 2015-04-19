@@ -119,7 +119,7 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 	gob.Register(mssg.WorkReq{})
 	enc := gob.NewEncoder(conn)
 	dec := gob.NewDecoder(conn)
-	avgTimes := make(map[uint8]uint32)
+	avgTimes := make(map[uint8]float64)
 	dec.Decode(header)
 
 	if header.Type == 1 && header.Id != 0 {
