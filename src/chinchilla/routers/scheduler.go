@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 const poolSize = 15
@@ -119,7 +120,7 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 	gob.Register(mssg.WorkReq{})
 	enc := gob.NewEncoder(conn)
 	dec := gob.NewDecoder(conn)
-	avgTimes := make(map[uint8]float64)
+	avgTimes := make(map[uint8]int64)
 	dec.Decode(header)
 
 	if header.Type == 1 && header.Id != 0 {
@@ -149,6 +150,8 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 			return
 		} else {
 			RespQueue <- *resp
+			t := time.Since(resp.RTime)
+			fmt.Printf("time in is %f", time.Duration.Seconds(t))
 			workers.l.Lock()
 			fmt.Printf("Queue length for %u is %u", resp.Id, len(workers.m[resp.Id].Reqs))
 			tmp := workers.m[resp.Id]
@@ -157,7 +160,7 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 				workers.m[resp.Id] = tmp
 			}
 			workers.l.Unlock()
-			avgTimes[resp.Type] = resp.RTime // Add weighted avg function
+			avgTimes[resp.Type] = time.Duration.Nanoseconds(t) // Add weighted avg function
 		}
 	}
 }
@@ -196,7 +199,7 @@ func AddReqQueue(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg
 	jobs.m[id].Mtx.Lock()
 	jobs.l.Unlock()
 	fmt.Println("Adding req to queue")
-	ReqQueue <- mssg.WorkReq{Type: uint8(typ), Arg1: arg1, WId: id}
+	ReqQueue <- mssg.WorkReq{Type: uint8(typ), Arg1: arg1, WId: id, STime: time.Now()}
 }
 
 func SendWorkReq(ReqQueue chan mssg.WorkReq, workers *MapQ) {
