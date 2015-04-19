@@ -4,9 +4,11 @@ import (
 	"chinchilla/mssg"
 	"encoding/gob"
 	"fmt"
+	"math/rand"
 	"net"
 	"os"
 	"strconv"
+	"time"
 )
 
 func checkError(err error) {
@@ -38,18 +40,32 @@ func main() {
 
 	enc := gob.NewEncoder(conn)
 	dec := gob.NewDecoder(conn)
-	data_struct := new(mssg.WorkRespData)
 
 	enc.Encode(data)
+	rand.Seed(time.Now().Unix())
 	for {
 		err := dec.Decode(wReq)
 		if err != nil {
 			conn.Close()
 			return
 		}
-		fmt.Printf("type %u, arg1 %s, host %s\n", wReq.Type, wReq.Arg1, wReq.WId)
-		wResp := mssg.WorkResp{1, 1, *data_struct, wReq.WId, 10}
-		enc.Encode(wResp)
+		handleRequest(wReq, enc)
 	}
 
+	fmt.Println("here")
+
+}
+
+func handleRequest(wReq *mssg.WorkReq, enc *gob.Encoder) {
+
+	data_struct := new(mssg.WorkRespData)
+	work_time := (rand.Float64() * 3) + 0.5
+
+	fmt.Println(work_time)
+
+	time.Sleep(time.Duration(work_time*1000) * time.Millisecond)
+
+	fmt.Printf("type %u, arg1 %s, host %s\n", wReq.Type, wReq.Arg1, wReq.WId)
+	wResp := mssg.WorkResp{1, 1, *data_struct, wReq.WId, work_time}
+	enc.Encode(wResp)
 }
