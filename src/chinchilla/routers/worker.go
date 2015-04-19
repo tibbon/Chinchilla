@@ -49,14 +49,14 @@ func main() {
 			conn.Close()
 			return
 		}
-		handleRequest(wReq, enc)
+		handleRequest(wReq, enc, id)
 	}
 
 	fmt.Println("here")
 
 }
 
-func handleRequest(wReq *mssg.WorkReq, enc *gob.Encoder) {
+func handleRequest(wReq *mssg.WorkReq, enc *gob.Encoder, wId uint32) {
 
 	data_struct := new(mssg.WorkRespData)
 	work_time := 0.0
@@ -75,6 +75,6 @@ func handleRequest(wReq *mssg.WorkReq, enc *gob.Encoder) {
 	time.Sleep(time.Duration(work_time*1000) * time.Millisecond)
 
 	fmt.Printf("type %u, arg1 %s, host %s\n", wReq.Type, wReq.Arg1, wReq.WId)
-	wResp := mssg.WorkResp{1, 1, *data_struct, wReq.WId, work_time}
+	wResp := mssg.WorkResp{1, wId, *data_struct, wReq.WId, work_time}
 	enc.Encode(wResp)
 }
