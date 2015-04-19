@@ -124,7 +124,7 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 
 	if header.Type == 1 && header.Id != 0 {
 		workers.l.Lock()
-		workers.m[header.Id] = Queue{header.QVal, enc, false, make([]mssg.WorkReq, 1)}
+		workers.m[header.Id] = Queue{header.QVal, enc, false, make([]mssg.WorkReq, 0)}
 		workers.l.Unlock()
 		fmt.Print("Added Worker connection to map\n")
 
@@ -133,7 +133,6 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 		fmt.Println("improper connect")
 		return
 	}
-
 	// Loop until server send 1 (D/C) or process infinite responses and update time objects and add to queue
 	for {
 		err := dec.Decode(resp)
@@ -151,8 +150,12 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 		} else {
 			RespQueue <- *resp
 			workers.l.Lock()
-			reqs := workers.m[header.Id].Reqs
-			reqs = reqs[1:]
+			fmt.Printf("Queue length for %u is %u", resp.Id, len(workers.m[resp.Id].Reqs))
+			tmp := workers.m[resp.Id]
+			if len(workers.m[resp.Id].Reqs) != 0 {
+				tmp.Reqs = workers.m[resp.Id].Reqs[1:]
+				workers.m[resp.Id] = tmp
+			}
 			workers.l.Unlock()
 			avgTimes[resp.Type] = resp.RTime // Add weighted avg function
 		}
@@ -211,11 +214,13 @@ func SendWorkReq(ReqQueue chan mssg.WorkReq, workers *MapQ) {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
 		}
 		fmt.Println("Sent work Request")
-		for _, v := range workers.m {
+		for k, v := range workers.m {
 			workers.l.Lock()
+			fmt.Printf("Worker %u", k)
 			for i := 0; i < len(v.Reqs); i++ {
-				fmt.Printf("Arg1 %s\n", v.Reqs[i].Arg1)
+				fmt.Printf("%s ", v.Reqs[i].Arg1)
 			}
+			fmt.Println("")
 			workers.l.Unlock()
 		}
 
