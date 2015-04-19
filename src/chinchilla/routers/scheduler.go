@@ -90,6 +90,10 @@ func main() {
 	http.ListenAndServe(portno, nil)
 }
 
+func Test(w http.ResponseWriter, r *http.Request, ReqQueue chan mssg.WorkReq, jobs map[uint32]Job, ids []uint32) {
+
+}
+
 func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs *MapJ) {
 	portno := strings.Join([]string{":", os.Args[2]}, "")
 
@@ -122,7 +126,7 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 	gob.Register(mssg.WorkReq{})
 	enc := gob.NewEncoder(conn)
 	dec := gob.NewDecoder(conn)
-	avgTimes := make(map[uint8]int64)
+	avgTimes := make(map[uint8]float64)
 	dec.Decode(header)
 
 	if header.Type == 1 && header.Id != 0 {
@@ -150,7 +154,7 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 			return
 		} else {
 			RespQueue <- *resp
-			t := time.Since(resp.RTime)
+			t := resp.RTime
 			workers.l.Lock()
 			fmt.Printf("Queue length for %d is %d\n", resp.Id, len(workers.m[resp.Id].Reqs))
 			tmp := workers.m[resp.Id]
@@ -159,7 +163,7 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 				workers.m[resp.Id] = tmp
 			}
 			workers.l.Unlock()
-			avgTimes[resp.Type] = time.Duration.Nanoseconds(t) // Add weighted avg function
+			avgTimes[resp.Type] = t // Add weighted avg function
 		}
 	}
 }
@@ -171,9 +175,14 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs *MapJ) {
 		json_resp, _ := json.Marshal(resp)
 		jobs.l.Lock()
 		w := jobs.m[resp.WId].W
+		// allow cross domain AJAX requests
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(200)
+<<<<<<< HEAD
+=======
+
+>>>>>>> f198f2e54a106475ad0235443788b97a0deb4d19
 		_, err := w.Write(json_resp)
 		jobs.l.Unlock()
 		close(jobs.m[resp.WId].Sem)

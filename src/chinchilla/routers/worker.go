@@ -63,7 +63,7 @@ func handleRequest(wReq *mssg.WorkReq, enc *gob.Encoder, id uint32) {
 
 	switch wReq.Type {
 	case 1:
-		work_time = (rand.Float64() * 0.05)
+		work_time = (rand.Float64() * 1)
 	case 2:
 		work_time = (rand.Float64() * 0.75) + 0.5
 	case 3:
@@ -75,6 +75,6 @@ func handleRequest(wReq *mssg.WorkReq, enc *gob.Encoder, id uint32) {
 	time.Sleep(time.Duration(work_time*1000) * time.Millisecond)
 
 	fmt.Printf("type %u, arg1 %s, host %s\n", wReq.Type, wReq.Arg1, wReq.WId)
-	wResp := mssg.WorkResp{1, id, *data_struct, wReq.WId, wReq.STime}
+	wResp := mssg.WorkResp{1, id, *data_struct, wReq.WId, float64(time.Duration(time.Since(wReq.STime)).Seconds())}
 	enc.Encode(wResp)
 }
