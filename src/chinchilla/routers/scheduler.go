@@ -17,6 +17,8 @@ import (
 
 const poolSize = 15
 
+var Counter int
+
 type Queue struct {
 	QVal uint32
 	Enc  *gob.Encoder
@@ -52,6 +54,7 @@ func checkError(err error) {
 
 func main() {
 	args := os.Args
+	Counter = 0
 
 	if len(args) != 3 {
 		fmt.Println("usage is <portno http> <portno tcp>")
@@ -190,6 +193,8 @@ func SendResp(RespQueue chan mssg.WorkResp, jobs *MapJ) {
 func AddReqQueue(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg1 string, id uint32, jobs *MapJ) {
 	jobs.l.Lock()
 	jobs.m[id] = Job{W: w, Mtx: &sync.Mutex{}}
+	Counter += 1
+	fmt.Println(Counter)
 	jobs.m[id].Mtx.Lock()
 	jobs.l.Unlock()
 	ReqQueue <- mssg.WorkReq{Type: uint8(typ), Arg1: arg1, WId: id, STime: time.Now()}
