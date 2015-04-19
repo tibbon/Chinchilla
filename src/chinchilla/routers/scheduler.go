@@ -9,8 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	// "strconv"
-	"log"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -74,31 +73,22 @@ func main() {
 		ids.s[i] = uint32(i)
 	}
 
-	r.HandleFunc("/api/{type}/{arg1}", handleR).Methods("get")
-	// func(w http.ResponseWriter, r *http.Request) {
-	// fmt.Println("got hurr")
-	// time.Sleep(1500 * time.Millisecond)
-	// w.Write([]byte("fuck you"))
-	// fmt.Println("Done Write")
-	// var id uint32
-	// typ, _ := strconv.Atoi(mux.Vars(r)["type"])
-	// ids.l.Lock()
-	// id, ids.s = ids.s[0], ids.s[1:] // get a free work id (ultimately this is load distribution)
-	// ids.l.Unlock()
-	// AddReqQueue(w, ReqQueue, typ, mux.Vars(r)["arg1"], id, jobs)
-	// fmt.Printf("got here with id %d\n", id)
-	// <-jobs.m[id].Sem
+	r.HandleFunc("/api/{type}/{arg1}", func(w http.ResponseWriter, r *http.Request) {
+		var id uint32
+		typ, _ := strconv.Atoi(mux.Vars(r)["type"])
+		ids.l.Lock()
+		id, ids.s = ids.s[0], ids.s[1:] // get a free work id (ultimately this is load distribution)
+		ids.l.Unlock()
+		AddReqQueue(w, ReqQueue, typ, mux.Vars(r)["arg1"], id, jobs)
+		fmt.Printf("got here with id %d\n", id)
+		<-jobs.m[id].Sem
+
+	}).Methods("get")
 
 	go AcceptWorkers(ReqQueue, jobs)
 
 	http.Handle("/", r)
-	log.Fatal(http.ListenAndServe(portno, nil))
-}
-func handleR(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("got hurr")
-	time.Sleep(1500 * time.Millisecond)
-	w.Write([]byte("fuck you"))
-	fmt.Println("Done Write")
+	http.ListenAndServe(portno, nil)
 }
 
 func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs *MapJ) {
@@ -179,7 +169,6 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 func SendResp(RespQueue chan mssg.WorkResp, jobs *MapJ) {
 	for {
 		resp := <-RespQueue
-		fmt.Println("Sending resp")
 		json_resp, _ := json.Marshal(resp)
 		// fmt.Println(resp.Data)
 		jobs.l.Lock()
