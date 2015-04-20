@@ -1,11 +1,12 @@
 pkill -f "$1 $2"                      # kill exiting servers of the same type on this machine
 git pull origin master                # update code
 go build src/chinchilla/routers/$1.go # build startup script
-if $1 == "scheduler" then
+if [ "$1" = "scheduler" ] 
+then
     ./$1 $2 $3
 else 
-    for i in {1..$3}
+    for i in $(seq 1 $3)
     do 
-        ./$1 $2 i &
-    end                                   #run startup 
+        ./$1 $2 $i &
+    done
 fi
