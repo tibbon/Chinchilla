@@ -2,8 +2,9 @@ package main
 
 import (
 	"chinchilla/mssg"
+	"chinchilla/send"
+	"chinchilla/types"
 	"encoding/gob"
-	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	"net"
@@ -12,39 +13,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 const poolSize = 15
-
-var Counter int
-
-type Queue struct {
-	QVal     float64
-	Enc      *gob.Encoder
-	Sent     bool
-	Reqs     []mssg.WorkReq
-	avgTimes map[uint8]float64
-}
-type Job struct {
-	W   http.ResponseWriter
-	Sem chan struct{}
-}
-
-type MapJ struct {
-	m map[uint32]Job
-	l *sync.RWMutex
-}
-
-type MapQ struct {
-	m map[uint32]Queue
-	l *sync.RWMutex
-}
-
-type Stack struct {
-	s []uint32
-	l *sync.RWMutex
-}
 
 func checkError(err error) {
 	if err != nil {
@@ -55,7 +26,6 @@ func checkError(err error) {
 
 func main() {
 	args := os.Args
-	Counter = 0
 
 	if len(args) != 3 {
 		fmt.Println("usage is <portno http> <portno tcp>")
@@ -66,22 +36,22 @@ func main() {
 	ReqQueue := make(chan mssg.WorkReq, 10000)
 	r := mux.NewRouter()
 
-	jobs := &MapJ{make(map[uint32]Job), new(sync.RWMutex)}
-	ids := &Stack{make([]uint32, 10000), new(sync.RWMutex)} // make extensible later
+	jobs := &types.MapJ{make(map[uint32]types.Job), new(sync.RWMutex)}
+	ids := &types.Stack{make([]uint32, 10000), new(sync.RWMutex)} // make extensible later
 
 	for i := 0; i < 10000; i++ {
-		ids.s[i] = uint32(i)
+		ids.S[i] = uint32(i)
 	}
 
 	r.HandleFunc("/api/{type}/{arg1}", func(w http.ResponseWriter, r *http.Request) {
 		var id uint32
 		typ, _ := strconv.Atoi(mux.Vars(r)["type"])
-		ids.l.Lock()
-		id, ids.s = ids.s[0], ids.s[1:] // get a free work id (ultimately this is load distribution)
-		ids.l.Unlock()
-		AddReqQueue(w, ReqQueue, typ, mux.Vars(r)["arg1"], id, jobs)
+		ids.L.Lock()
+		id, ids.S = ids.S[0], ids.S[1:] // get a free work id (ultimately this is load distribution)
+		ids.L.Unlock()
+		send.Scheduler(w, ReqQueue, typ, mux.Vars(r)["arg1"], id, jobs)
 		fmt.Printf("got here with id %d\n", id)
-		<-jobs.m[id].Sem
+		<-jobs.M[id].Sem
 
 	}).Methods("get")
 
@@ -91,19 +61,19 @@ func main() {
 	http.ListenAndServe(portno, nil)
 }
 
-func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs *MapJ) {
+func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs *types.MapJ) {
 	portno := strings.Join([]string{":", os.Args[2]}, "")
 
 	ln, err := net.Listen("tcp", portno)
 	checkError(err)
 
-	workers := &MapQ{make(map[uint32]Queue), new(sync.RWMutex)}
+	workers := &types.MapQ{make(map[uint32]types.Queue), new(sync.RWMutex)}
 	RespQueue := make(chan mssg.WorkResp)
 
-	go SendWorkReq(ReqQueue, workers)
+	go send.Node(ReqQueue, workers)
 	// Makes response pool for compete work requests
 	for i := 0; i < poolSize; i++ {
-		go SendResp(RespQueue, jobs)
+		go send.Client(RespQueue, jobs)
 	}
 
 	for {
@@ -116,7 +86,7 @@ func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs *MapJ) {
 	}
 }
 
-func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
+func RecvWork(conn net.Conn, workers *types.MapQ, RespQueue chan mssg.WorkResp) {
 
 	header := new(mssg.Connect)
 	resp := new(mssg.WorkResp)
@@ -126,9 +96,9 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 	dec.Decode(header)
 
 	if header.Type == 1 && header.Id != 0 {
-		workers.l.Lock()
-		workers.m[header.Id] = Queue{header.QVal, enc, false, make([]mssg.WorkReq, 0), make(map[uint8]float64)}
-		workers.l.Unlock()
+		workers.L.Lock()
+		workers.M[header.Id] = types.Queue{header.QVal, enc, false, make([]mssg.WorkReq, 0), make(map[uint8]float64)}
+		workers.L.Unlock()
 
 	} else {
 		conn.Close()
@@ -140,144 +110,45 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 		err := dec.Decode(resp)
 		if err != nil {
 			conn.Close()
-			workers.l.Lock()
-			delete(workers.m, resp.Id)
-			workers.l.Unlock()
+			workers.L.Lock()
+			delete(workers.M, resp.Id)
+			workers.L.Unlock()
 			return
 		}
 		if resp.Type == 0 {
 			conn.Close()
-			workers.l.Lock()
-			delete(workers.m, resp.Id)
-			workers.l.Unlock()
+			workers.L.Lock()
+			delete(workers.M, resp.Id)
+			workers.L.Unlock()
 			return
 		} else {
 			RespQueue <- *resp
-			t := resp.RTime
-			workers.l.Lock()
-			fmt.Printf("Queue length for %d is %d\n", resp.Id, len(workers.m[resp.Id].Reqs))
-			tmp := workers.m[resp.Id]
-			if len(workers.m[resp.Id].Reqs) != 0 {
-				tmp.Reqs = workers.m[resp.Id].Reqs[1:]
-				workers.m[resp.Id] = tmp
-			}
-			workers.m[header.Id].avgTimes[resp.Type] = t
-			tmp = workers.m[header.Id]
-			tmp.QVal -= t - .1
-			if tmp.QVal < 0.0 {
-				tmp.QVal = 0
-			}
-			workers.m[header.Id] = tmp
-			workers.l.Unlock()
-			fmt.Printf("time is %f", t)
+			HandleResp(resp, workers, header.Id)
 		}
 	}
 }
 
-// Thread to send responses back to hosts
-func SendResp(RespQueue chan mssg.WorkResp, jobs *MapJ) {
-	for {
-		resp := <-RespQueue
-		json_resp, _ := json.Marshal(resp)
-		jobs.l.Lock()
-		w := jobs.m[resp.WId].W
-		// allow cross domain AJAX requests
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.WriteHeader(200)
+func HandleResp(resp *mssg.WorkResp, workers *types.MapQ, id uint32) {
+	t := resp.RTime
+	fmt.Printf("Queue length for %d is %d\n", resp.Id, len(workers.M[resp.Id].Reqs))
 
-		_, err := w.Write(json_resp)
-		jobs.l.Unlock()
-		close(jobs.m[resp.WId].Sem)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
-			os.Exit(1)
-		}
+	workers.L.Lock()
+	tmp := workers.M[resp.Id]
 
+	if len(workers.M[resp.Id].Reqs) != 0 {
+		tmp.Reqs = workers.M[resp.Id].Reqs[1:]
+		workers.M[resp.Id] = tmp
 	}
-}
 
-// Add req struct to a channel
-func AddReqQueue(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg1 string, id uint32, jobs *MapJ) {
-	jobs.l.Lock()
-	jobs.m[id] = Job{W: w, Sem: make(chan struct{})}
-	Counter += 1
-	fmt.Println(Counter)
-	jobs.l.Unlock()
-	ReqQueue <- mssg.WorkReq{Type: uint8(typ), Arg1: arg1, WId: id}
+	workers.M[id].AvgTimes[resp.Type] = t
+	tmp = workers.M[id]
 
-}
+	tmp.QVal -= t - .1
+	if tmp.QVal < 0.0 {
+		tmp.QVal = 0
+	}
+	workers.M[id] = tmp
 
-func SendWorkReq(ReqQueue chan mssg.WorkReq, workers *MapQ) {
-	for {
-		req := <-ReqQueue
-		req.STime = time.Now()
-		// node := ShortestQ(workers, req.Type)
-		node := RoundRobin(workers)
-		workers.l.Lock()
-		tmp := workers.m[node]
-		tmp.Reqs = append(workers.m[node].Reqs, req)
-		workers.m[node] = tmp
-		err := workers.m[node].Enc.Encode(req)
-		workers.l.Unlock()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
-		}
-	}
-}
-
-func RoundRobin(workers *MapQ) uint32 {
-
-	for k, v := range workers.m {
-		workers.l.Lock()
-		if !workers.m[k].Sent {
-			v.Sent = true
-			workers.m[k] = v
-			workers.l.Unlock()
-			return k
-		}
-		workers.l.Unlock()
-	}
-	for k, v := range workers.m {
-		workers.l.Lock()
-		v.Sent = false
-		workers.m[k] = v
-		workers.l.Unlock()
-	}
-	for k, v := range workers.m {
-		v.Sent = true
-		workers.m[k] = v
-		return k
-	}
-	return 0
-}
-
-func ShortestQ(workers *MapQ, typ uint8) uint32 {
-	fmt.Println("in shortest Q")
-	first := true
-	var node uint32
-	var min float64
-	for k, v := range workers.m {
-		if first {
-			node = k
-			min = v.QVal
-			first = false
-		} else {
-			if v.QVal <= min {
-				min = v.QVal
-				node = k
-			}
-		}
-		fmt.Printf("node %d has a QVal of %f\n", k, v.QVal)
-	}
-	for k, v := range workers.m[node].avgTimes {
-		fmt.Printf("type %d has qval of %f\n", k, v)
-	}
-	workers.l.Lock()
-	tmp := workers.m[node]
-	tmp.QVal += workers.m[node].avgTimes[typ] + .1
-	workers.m[node] = tmp
-	workers.l.Unlock()
-	fmt.Printf("chose node %d\n", node)
-	return node
+	workers.L.Unlock()
+	fmt.Printf("time is %f", t)
 }
