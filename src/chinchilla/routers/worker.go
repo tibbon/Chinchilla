@@ -60,14 +60,14 @@ func handleRequest(wReq *mssg.WorkReq, enc *gob.Encoder, id uint32) {
 
 	data_struct := new(mssg.WorkRespData)
 	work_time := 0.0
-
+	wReq.STime = time.Now()
 	switch wReq.Type {
 	case 1:
-		work_time = .5
+		work_time = .1
 	case 2:
-		work_time = 1.0
+		work_time = 2.0
 	case 3:
-		work_time = 1.5
+		work_time = 4.5
 	}
 
 	fmt.Println(work_time)

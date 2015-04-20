@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 const poolSize = 15
@@ -148,17 +149,17 @@ func UpdateQueueTimes(resp *mssg.WorkResp, workers *types.MapQ, id uint32) {
 		tmp.Reqs = workers.M[resp.Id].Reqs[1:]
 		workers.M[resp.Id] = tmp
 	}
-
 	workers.M[id].AvgTimes[resp.Type] = t
 	tmp = workers.M[id]
 
-	tmp.QVal -= t - .1
+	tmp.QVal -= t - .01
 	if tmp.QVal < 0.0 {
 		tmp.QVal = 0
 	}
 
 	workers.M[id] = tmp
 	workers.L.Unlock()
-
-	fmt.Printf(" Job %d took %f on node %d\n", resp.WId, t, id)
+	const layout = "Mon Jan 2 15:04:05"
+	tf := time.Now().Local()
+	fmt.Printf(" Job %d took %f on node %d-- %s \n", resp.WId, t, id, tf.Format(layout))
 }

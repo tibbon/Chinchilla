@@ -31,7 +31,6 @@ func RoundRobin(workers *types.MapQ) uint32 {
 }
 
 func ShortestQ(workers *types.MapQ, typ uint8) uint32 {
-	fmt.Println("in shortest Q")
 	first := true
 	var node uint32
 	var min float64
@@ -46,16 +45,13 @@ func ShortestQ(workers *types.MapQ, typ uint8) uint32 {
 				node = k
 			}
 		}
-		fmt.Printf("node %d has a QVal of %f\n", k, v.QVal)
-	}
-	for k, v := range workers.M[node].AvgTimes {
-		fmt.Printf("type %d has qval of %f\n", k, v)
+		fmt.Printf("Node %d has a QVal of %f\n", k, v.QVal)
 	}
 	workers.L.Lock()
 	tmp := workers.M[node]
-	tmp.QVal += workers.M[node].AvgTimes[typ] + .1
+	tmp.QVal += workers.M[node].AvgTimes[typ] + .01
 	workers.M[node] = tmp
 	workers.L.Unlock()
-	fmt.Printf("chose node %d\n", node)
+	fmt.Printf("Chose node %d for type %d\n", node, typ)
 	return node
 }
