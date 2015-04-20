@@ -38,7 +38,7 @@ func main() {
 	jobs := &types.MapJ{make(map[uint32]types.Job), new(sync.RWMutex)}
 	ids := &types.Stack{make([]uint32, 10000), new(sync.RWMutex)}
 	//Don't use a zero work id
-	for i := 1; i < 1001; i++ {
+	for i := 1; i < 10001; i++ {
 		ids.S[i-1] = uint32(i)
 	}
 
