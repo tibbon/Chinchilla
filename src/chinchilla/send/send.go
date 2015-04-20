@@ -43,8 +43,14 @@ func Scheduler(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg1 
 }
 
 func Node(ReqQueue chan mssg.WorkReq, workers *types.MapQ) {
+
 	for {
+
 		req := <-ReqQueue
+		if len(workers.M) == 0 {
+			fmt.Println("No workers you dangus")
+			os.Exit(1)
+		}
 		req.STime = time.Now()
 		// node := ShortestQ(workers, req.Type)
 		node := schedule.RoundRobin(workers)
