@@ -160,5 +160,5 @@ func UpdateQueueTimes(resp *mssg.WorkResp, workers *types.MapQ, id uint32) {
 	workers.M[id] = tmp
 	workers.L.Unlock()
 
-	fmt.Printf("time is %f for job %d on node %d\n", t, resp.WId, id)
+	fmt.Printf(" Job %d took %f on node %d\n", resp.WId, t, id)
 }
