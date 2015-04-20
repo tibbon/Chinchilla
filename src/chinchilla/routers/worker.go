@@ -75,6 +75,6 @@ func handleRequest(wReq *mssg.WorkReq, enc *gob.Encoder, id uint32) {
 	time.Sleep(time.Duration(work_time*1000) * time.Millisecond)
 
 	fmt.Printf("type %u, arg1 %s, host %s\n", wReq.Type, wReq.Arg1, wReq.WId)
-	wResp := mssg.WorkResp{wReq.Type, id, *data_struct, wReq.WId, float64(time.Duration(time.Since(wReq.STime)).Seconds())}
+	wResp := mssg.WorkResp{wReq.Type, id, *data_struct, wReq.WId, float64(time.Duration(time.Since(wReq.STime)).Seconds()), 0}
 	enc.Encode(wResp)
 }
