@@ -22,10 +22,10 @@ func Client(RespQueue chan mssg.WorkResp, jobs *types.MapJ) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.WriteHeader(200)
-
 		_, err := w.Write(json_resp)
-		jobs.L.Unlock()
 		close(jobs.M[resp.WId].Sem)
+		jobs.L.Unlock()
+
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
 			os.Exit(1)
@@ -52,7 +52,6 @@ func Node(ReqQueue chan mssg.WorkReq, workers *types.MapQ) {
 			os.Exit(1)
 		}
 		req.STime = time.Now()
-		// node := ShortestQ(workers, req.Type)
 		node := schedule.RoundRobin(workers)
 		workers.L.Lock()
 		tmp := workers.M[node]

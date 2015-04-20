@@ -31,34 +31,43 @@ func main() {
 		fmt.Println("usage is <portno http> <portno tcp>")
 		os.Exit(1)
 	}
-	portno := strings.Join([]string{":", args[1]}, "")
-
-	ReqQueue := make(chan mssg.WorkReq, 10000)
 	r := mux.NewRouter()
-
+	portno := strings.Join([]string{":", args[1]}, "")
+	ReqQueue := make(chan mssg.WorkReq, 10000)
 	jobs := &types.MapJ{make(map[uint32]types.Job), new(sync.RWMutex)}
-	ids := &types.Stack{make([]uint32, 10000), new(sync.RWMutex)} // make extensible later
-
-	for i := 0; i < 10000; i++ {
-		ids.S[i] = uint32(i)
+	ids := &types.Stack{make([]uint32, 10000), new(sync.RWMutex)}
+	//Don't use a zero work id
+	for i := 1; i < 1001; i++ {
+		ids.S[i-1] = uint32(i)
 	}
 
 	r.HandleFunc("/api/{type}/{arg1}", func(w http.ResponseWriter, r *http.Request) {
-		var id uint32
 		typ, _ := strconv.Atoi(mux.Vars(r)["type"])
-		ids.L.Lock()
-		id, ids.S = ids.S[0], ids.S[1:] // get a free work id (ultimately this is load distribution)
-		ids.L.Unlock()
-		send.Scheduler(w, ReqQueue, typ, mux.Vars(r)["arg1"], id, jobs)
-		fmt.Printf("got here with id %d\n", id)
-		<-jobs.M[id].Sem
-
+		handleRequest(jobs, ids, typ, w, mux.Vars(r)["arg1"], ReqQueue)
 	}).Methods("get")
 
 	go AcceptWorkers(ReqQueue, jobs)
 
 	http.Handle("/", r)
 	http.ListenAndServe(portno, nil)
+}
+
+func handleRequest(jobs *types.MapJ, ids *types.Stack, typ int, w http.ResponseWriter, arg1 string, ReqQueue chan mssg.WorkReq) {
+	var id uint32
+	ids.L.Lock()
+	id, ids.S = ids.S[0], ids.S[1:] // get a free work id (ultimately this is load distribution)
+	ids.L.Unlock()
+	send.Scheduler(w, ReqQueue, typ, arg1, id, jobs)
+	<-jobs.M[id].Sem
+
+	jobs.L.Lock()
+	delete(jobs.M, id)
+	jobs.L.Unlock()
+
+	ids.L.Lock()
+	ids.S = append(ids.S, id)
+	ids.L.Unlock()
+
 }
 
 func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs *types.MapJ) {
@@ -93,6 +102,7 @@ func RecvWork(conn net.Conn, workers *types.MapQ, RespQueue chan mssg.WorkResp) 
 	gob.Register(mssg.WorkReq{})
 	enc := gob.NewEncoder(conn)
 	dec := gob.NewDecoder(conn)
+
 	dec.Decode(header)
 
 	if header.Type == 1 && header.Id != 0 {
@@ -102,33 +112,32 @@ func RecvWork(conn net.Conn, workers *types.MapQ, RespQueue chan mssg.WorkResp) 
 
 	} else {
 		conn.Close()
-		fmt.Println("improper connect")
 		return
 	}
 	// Loop until server send 1 (D/C) or process infinite responses and update time objects and add to queue
 	for {
 		err := dec.Decode(resp)
 		if err != nil {
-			conn.Close()
-			workers.L.Lock()
-			delete(workers.M, resp.Id)
-			workers.L.Unlock()
+			RemoveWorker(conn, workers, resp.Id)
 			return
 		}
 		if resp.Type == 0 {
-			conn.Close()
-			workers.L.Lock()
-			delete(workers.M, resp.Id)
-			workers.L.Unlock()
+			RemoveWorker(conn, workers, resp.Id)
 			return
 		} else {
 			RespQueue <- *resp
-			HandleResp(resp, workers, header.Id)
+			UpdateQueueTimes(resp, workers, header.Id)
 		}
 	}
 }
+func RemoveWorker(conn net.Conn, workers *types.MapQ, id uint32) {
+	conn.Close()
+	workers.L.Lock()
+	delete(workers.M, id)
+	workers.L.Unlock()
+}
 
-func HandleResp(resp *mssg.WorkResp, workers *types.MapQ, id uint32) {
+func UpdateQueueTimes(resp *mssg.WorkResp, workers *types.MapQ, id uint32) {
 	t := resp.RTime
 	fmt.Printf("Queue length for %d is %d\n", resp.Id, len(workers.M[resp.Id].Reqs))
 
@@ -147,8 +156,9 @@ func HandleResp(resp *mssg.WorkResp, workers *types.MapQ, id uint32) {
 	if tmp.QVal < 0.0 {
 		tmp.QVal = 0
 	}
-	workers.M[id] = tmp
 
+	workers.M[id] = tmp
 	workers.L.Unlock()
-	fmt.Printf("time is %f", t)
+
+	fmt.Printf("time is %f for job %d on node %d\n", t, resp.WId, id)
 }
