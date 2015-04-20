@@ -91,12 +91,12 @@ func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs *types.MapJ) {
 		if err != nil {
 			continue
 		} else {
-			go RecvWork(conn, workers, RespQueue)
+			go RecvWork(conn, workers, RespQueue, ReqQueue)
 		}
 	}
 }
 
-func RecvWork(conn net.Conn, workers *types.MapQ, RespQueue chan mssg.WorkResp) {
+func RecvWork(conn net.Conn, workers *types.MapQ, RespQueue chan mssg.WorkResp, ReqQueue chan mssg.WorkReq) {
 
 	header := new(mssg.Connect)
 	resp := new(mssg.WorkResp)
@@ -119,11 +119,11 @@ func RecvWork(conn net.Conn, workers *types.MapQ, RespQueue chan mssg.WorkResp) 
 	for {
 		err := dec.Decode(resp)
 		if err != nil {
-			RemoveWorker(conn, workers, resp.Id)
+			RemoveWorker(conn, workers, resp.Id, ReqQueue)
 			return
 		}
 		if resp.Type == 0 {
-			RemoveWorker(conn, workers, resp.Id)
+			RemoveWorker(conn, workers, resp.Id, ReqQueue)
 			return
 		} else {
 			RespQueue <- *resp
@@ -131,9 +131,14 @@ func RecvWork(conn net.Conn, workers *types.MapQ, RespQueue chan mssg.WorkResp) 
 		}
 	}
 }
-func RemoveWorker(conn net.Conn, workers *types.MapQ, id uint32) {
+func RemoveWorker(conn net.Conn, workers *types.MapQ, id uint32, ReqQueue chan mssg.WorkReq) {
 	conn.Close()
 	workers.L.Lock()
+	if len(workers.M[id].Reqs) > 0 {
+		for i := 0; i < len(workers.M[id].Reqs); i++ {
+			send.ReScheduler(workers.M[id].Reqs[i], ReqQueue)
+		}
+	}
 	delete(workers.M, id)
 	workers.L.Unlock()
 }

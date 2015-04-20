@@ -42,6 +42,10 @@ func Scheduler(w http.ResponseWriter, ReqQueue chan mssg.WorkReq, typ int, arg1 
 
 }
 
+func ReScheduler(r mssg.WorkReq, ReqQueue chan mssg.WorkReq) {
+	ReqQueue <- r
+}
+
 func Node(ReqQueue chan mssg.WorkReq, workers *types.MapQ) {
 
 	for {
