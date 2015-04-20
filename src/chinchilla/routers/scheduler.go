@@ -140,6 +140,9 @@ func RecvWork(conn net.Conn, workers *MapQ, RespQueue chan mssg.WorkResp) {
 		err := dec.Decode(resp)
 		if err != nil {
 			conn.Close()
+			workers.l.Lock()
+			delete(workers.m, resp.Id)
+			workers.l.Unlock()
 			return
 		}
 		if resp.Type == 0 {
@@ -209,8 +212,8 @@ func SendWorkReq(ReqQueue chan mssg.WorkReq, workers *MapQ) {
 	for {
 		req := <-ReqQueue
 		req.STime = time.Now()
-		node := ShortestQ(workers, req.Type)
-		// node := RoundRobin(workers)
+		// node := ShortestQ(workers, req.Type)
+		node := RoundRobin(workers)
 		workers.l.Lock()
 		tmp := workers.m[node]
 		tmp.Reqs = append(workers.m[node].Reqs, req)
