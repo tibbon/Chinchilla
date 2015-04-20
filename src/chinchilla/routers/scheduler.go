@@ -137,6 +137,7 @@ func RecvWork(conn net.Conn, workers *types.MapQ, RespQueue chan mssg.WorkResp, 
 func RemoveWorker(conn net.Conn, workers *types.MapQ, id uint32, ReqQueue chan mssg.WorkReq) {
 	conn.Close()
 	workers.L.Lock()
+	fmt.Println("killed worker")
 	if len(workers.M[id].Reqs) > 0 {
 		for i := 0; i < len(workers.M[id].Reqs); i++ {
 			send.ReScheduler(workers.M[id].Reqs[i], ReqQueue)
@@ -148,7 +149,6 @@ func RemoveWorker(conn net.Conn, workers *types.MapQ, id uint32, ReqQueue chan m
 
 func UpdateQueueTimes(resp *mssg.WorkResp, workers *types.MapQ, id uint32) {
 	t := resp.PTime
-	fmt.Printf("Queue length for %d is %d\n", resp.Id, len(workers.M[resp.Id].Reqs))
 
 	workers.L.Lock()
 	tmp := workers.M[resp.Id]

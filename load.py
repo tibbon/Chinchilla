@@ -5,21 +5,10 @@ import time
 session = FuturesSession(executor=ThreadPoolExecutor(max_workers=1000))
 # first request is started in background
 
-for x in xrange(1,10):
-    session.get('http://localhost:8080/api/1/hello')
+for x in xrange(1,100):
     session.get('http://localhost:8080/api/1/hello')
     session.get('http://localhost:8080/api/2/hello')
-    session.get('http://localhost:8080/api/1/hello')
     session.get('http://localhost:8080/api/3/hello')
-    session.get('http://localhost:8080/api/1/hello')
-    session.get('http://localhost:8080/api/3/hello')
-time.sleep(50)
+    time.sleep(3)
 
-for x in xrange(1,10):
-    session.get('http://localhost:8080/api/1/hello')
-    session.get('http://localhost:8080/api/1/hello')
-    session.get('http://localhost:8080/api/2/hello')
-    session.get('http://localhost:8080/api/1/hello')
-    session.get('http://localhost:8080/api/3/hello')
-    session.get('http://localhost:8080/api/1/hello')
-    session.get('http://localhost:8080/api/3/hello')
+
