@@ -24,7 +24,8 @@ type WorkResp struct {
 	Id    uint32       `json:"id"`
 	Data  WorkRespData `json:"data"` // Can be json kind of thing or string
 	WId   uint32       `json:"work_id"`
-	RTime float64      `json:"return_time"`
+	PTime float64      `json:"return_time"`
+	QVal  float64      `json:"q_val"`
 }
 
 type WorkRespData struct {

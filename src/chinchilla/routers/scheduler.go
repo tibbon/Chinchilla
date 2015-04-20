@@ -126,6 +126,9 @@ func RecvWork(conn net.Conn, workers *types.MapQ, RespQueue chan mssg.WorkResp, 
 			RemoveWorker(conn, workers, resp.Id, ReqQueue)
 			return
 		} else {
+			workers.L.RLock()
+			resp.QVal = workers.M[header.Id].QVal
+			workers.L.RUnlock()
 			RespQueue <- *resp
 			UpdateQueueTimes(resp, workers, header.Id)
 		}
@@ -144,7 +147,7 @@ func RemoveWorker(conn net.Conn, workers *types.MapQ, id uint32, ReqQueue chan m
 }
 
 func UpdateQueueTimes(resp *mssg.WorkResp, workers *types.MapQ, id uint32) {
-	t := resp.RTime
+	t := resp.PTime
 	fmt.Printf("Queue length for %d is %d\n", resp.Id, len(workers.M[resp.Id].Reqs))
 
 	workers.L.Lock()
