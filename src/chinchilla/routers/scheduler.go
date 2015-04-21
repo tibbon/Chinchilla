@@ -161,7 +161,7 @@ func UpdateQueueTimes(resp *mssg.WorkResp, workers *types.MapQ, id uint32) {
 	workers.M[id].AvgTimes[resp.Type] = t
 	tmp = workers.M[id]
 
-	tmp.QVal -= t - .01
+	tmp.QVal -= (t + .01)
 	if tmp.QVal < 0.0 {
 		tmp.QVal = 0
 	} else if tmp.QLen <= 0 {
