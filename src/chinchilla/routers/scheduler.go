@@ -108,7 +108,7 @@ func RecvWork(conn net.Conn, workers *types.MapQ, RespQueue chan mssg.WorkResp, 
 
 	if header.Type == 1 && header.Id != 0 {
 		workers.L.Lock()
-		workers.M[header.Id] = types.Queue{header.QVal, enc, false, make([]mssg.WorkReq, 0), make(map[uint8]float64)}
+		workers.M[header.Id] = types.Queue{0, header.QVal, enc, false, make([]mssg.WorkReq, 0), make(map[uint8]float64)}
 		workers.L.Unlock()
 
 	} else {
@@ -152,6 +152,7 @@ func UpdateQueueTimes(resp *mssg.WorkResp, workers *types.MapQ, id uint32) {
 
 	workers.L.Lock()
 	tmp := workers.M[resp.Id]
+	tmp.QLen = workers.M[resp.Id].QLen - 1
 
 	if len(workers.M[resp.Id].Reqs) != 0 {
 		tmp.Reqs = workers.M[resp.Id].Reqs[1:]
@@ -162,6 +163,8 @@ func UpdateQueueTimes(resp *mssg.WorkResp, workers *types.MapQ, id uint32) {
 
 	tmp.QVal -= t - .01
 	if tmp.QVal < 0.0 {
+		tmp.QVal = 0
+	} else if tmp.QLen <= 0 {
 		tmp.QVal = 0
 	}
 

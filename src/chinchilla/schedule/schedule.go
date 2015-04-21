@@ -7,7 +7,7 @@ import (
 
 func RoundRobin(workers *types.MapQ, typ uint8) uint32 {
 	for k, v := range workers.M {
-		fmt.Printf("node %d has a QVal of %f\n", k, v.QVal)
+		fmt.Printf("node %d has a QVal of %f and QLen %d\n", k, v.QVal, v.QLen)
 		workers.L.Lock()
 		if !workers.M[k].Sent {
 			v.Sent = true

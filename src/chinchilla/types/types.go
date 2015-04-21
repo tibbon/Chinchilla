@@ -8,6 +8,7 @@ import (
 )
 
 type Queue struct {
+	QLen     int
 	QVal     float64
 	Enc      *gob.Encoder
 	Sent     bool
