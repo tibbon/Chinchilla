@@ -8,5 +8,6 @@ else
     for i in $(seq 1 $3)
     do 
         ./$1 $2 $i &
+        echo "starting worker $i"
     done
 fi
