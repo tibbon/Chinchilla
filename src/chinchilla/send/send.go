@@ -55,7 +55,7 @@ func Node(ReqQueue chan mssg.WorkReq, workers *types.MapQ) {
 			os.Exit(1)
 		}
 		req.STime = time.Now()
-		node := schedule.ShortestQ(workers, req.Type)
+		node := schedule.RoundRobin(workers, req.Type)
 		workers.L.Lock()
 		tmp := workers.M[node]
 		tmp.Reqs = append(workers.M[node].Reqs, req)
