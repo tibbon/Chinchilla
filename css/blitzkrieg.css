@@ -22,6 +22,8 @@ body {
   top: 20;
   right: 0;
   margin-right: 20px;
+  width: intrinsic;
+  text-align: center;
 }
 .button {
   margin: 10px auto 10px auto;
@@ -32,11 +34,16 @@ body {
   border-radius: 2px;
   width: intrinsic;
   transition: background 0.5s ease;
+  text-align: center;
 }
 .button p {
+  display: inline-block;
   color: #333;
   transition: color 0.5s ease;
   margin: 3px 0 3px 0;
+}
+.button p.button-name {
+  display: block;
 }
 .button.selected {
   background: #333;
@@ -69,7 +76,7 @@ body {
 }
 .form-control.number,
 .form-control-time.number {
-  width: 50px;
+  width: 80px;
 }
 .form-control:focus,
 .form-control-time:focus {
@@ -88,7 +95,7 @@ form {
   position: absolute;
   right: 0;
   top: 20px;
-  margin-right: 260px;
+  margin-right: 300px;
   text-align: center;
 }
 .line-graph {
@@ -140,7 +147,15 @@ form {
   width: 5px;
   float: left;
 }
+.worker-stats .worker-stat .data {
+  margin: 0;
+  margin-top: 10px;
+  border: 1px solid #333;
+  height: 30px;
+}
 .worker-stats .worker-stat p {
+  margin: 0;
+  line-height: 30px;
   display: inline-block;
   margin-right: 20px;
 }

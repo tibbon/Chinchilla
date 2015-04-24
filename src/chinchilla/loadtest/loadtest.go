@@ -48,6 +48,43 @@ func NewLoadTester(apiPort string, c websocket.Conn) *LoadTester {
 	return &LoadTester{apiPort, c, false, nil}
 }
 
+func (t *LoadTester) Blast(w http.ResponseWriter, r *http.Request, reqType int, numBlast int) {
+
+	ch := make(chan *response, numBlast)
+	url := "http://localhost:" + t.ApiPort + "/api/" + strconv.Itoa(reqType) + "/test"
+	go func() {
+		for i := 0; i < numBlast; i++ {
+			go func() {
+				fmt.Println(url)
+				resp, err := http.Get(url)
+				if err == nil {
+					ch <- &response{resp}
+					fmt.Println(resp)
+				}
+			}()
+		}
+	}()
+
+	go func() {
+		for !t.Stop {
+			select {
+			case r := <-ch:
+				temp_struct := new(workResp)
+				body, err := ioutil.ReadAll(r.response.Body)
+				if err != nil {
+					fmt.Println("error")
+				}
+				err = json.Unmarshal(body, &temp_struct)
+				if err != nil {
+					fmt.Println("error")
+				}
+				fmt.Println(temp_struct)
+				t.Socket.WriteJSON(temp_struct)
+			}
+		}
+	}()
+}
+
 func (t *LoadTester) LoadTest(w http.ResponseWriter, r *http.Request, p *TestParams) {
 
 	numRequests := 4
@@ -59,16 +96,12 @@ func (t *LoadTester) LoadTest(w http.ResponseWriter, r *http.Request, p *TestPar
 
 	time.Sleep(1000 * time.Millisecond)
 
-	fmt.Println(p.AlgType)
-	fmt.Println(p.WorkerCount)
-
 	go func() {
 		for !t.Stop {
 			time.Sleep(1000 * time.Millisecond)
 			for j := 0; j < 3; j++ {
 				for i := 0; i < reqPerType[j]; i++ {
 					go func(v int) {
-						fmt.Println("sending")
 						resp, err := http.Get(url + strconv.Itoa(v+1) + "/test")
 						if err == nil {
 							ch <- &response{resp}
@@ -82,11 +115,9 @@ func (t *LoadTester) LoadTest(w http.ResponseWriter, r *http.Request, p *TestPar
 
 	go func() {
 		for !t.Stop {
-			fmt.Println("trying to read")
 			select {
 			case r := <-ch:
 				temp_struct := new(workResp)
-				fmt.Println(r)
 				body, err := ioutil.ReadAll(r.response.Body)
 				if err != nil {
 					fmt.Println("error")
@@ -95,7 +126,6 @@ func (t *LoadTester) LoadTest(w http.ResponseWriter, r *http.Request, p *TestPar
 				if err != nil {
 					fmt.Println("error")
 				}
-				fmt.Println("responding: ", temp_struct)
 				t.Socket.WriteJSON(temp_struct)
 			}
 		}

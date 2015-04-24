@@ -41,6 +41,23 @@ var Blitzkrieg = function() {
             })
         },
 
+        blast: function() {
+            $.ajax({
+                url: "/blast",
+                type: "post",
+                dataType: "json",
+                data: {
+                    "blast_type" : $("input[name='blast-type']").val(),
+                    "blast_count" : $("input[name='blast-count']").val()
+                },
+                success: function(data) {
+                },
+                error: function(header, status, error) {
+                    console.log(header);
+                }
+            })
+        },
+
         endTest: function() {
             $.ajax({
                 url: "/stop_test",
@@ -84,6 +101,13 @@ $(function() {
     } else {
         console.log($("<div><b>Your browser does not support WebSockets.</b></div>"))
     }
+
+    $(".blast-button").on("click", function(e) {
+
+        if(!$(e.target).hasClass("number")) {
+            b.blast()
+        }
+    })
 
     $(".blitzkrieg-button").on("click", function() {
         stop = false

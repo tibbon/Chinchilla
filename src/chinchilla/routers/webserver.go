@@ -57,6 +57,13 @@ func main() {
 
 	}).Methods("post")
 
+	r.HandleFunc("/blast", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		blastType, _ := strconv.Atoi(r.Form["blast_type"][0])
+		blastCount, _ := strconv.Atoi(r.Form["blast_count"][0])
+		T.Blast(w, r, blastType, blastCount)
+	}).Methods("post")
+
 	r.HandleFunc("/stop_test", func(w http.ResponseWriter, r *http.Request) {
 		T.Stop = true
 		T.StopTest()

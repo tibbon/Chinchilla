@@ -203,7 +203,15 @@ var NewUI = function(workerStorage) {
       .remove()
 
     cellEnter.on("click", function(d) {
-      graph.workerStorage.killWorker(d["id"])
+      d3.select("#line-"+d.id)
+        .transition()
+        .duration(500)
+        .ease("linear")
+        .style("opacity", 0)
+        .each("end", function() {
+          d3.select(this).remove()
+          graph.workerStorage.killWorker(d["id"])
+        })
       colors.push(d.ui.color)
     });
 
@@ -213,13 +221,16 @@ var NewUI = function(workerStorage) {
         return d["ui"]["color"]
       })
 
-    cellEnter.append("p")
+    var dataEl = cellEnter.append("div")
+      .attr("class", "data")
+
+    dataEl.append("p")
       .attr("class", "worker-id")
       .text(function(d) {
         return "Worker " + d["id"]
       });
 
-    cellEnter.append("p")
+    dataEl.append("p")
       .attr("class", "q-val")
       .text(function(d) {
         return "Queue: " + d["q_val"]
