@@ -1,43 +1,113 @@
 @import url(http://fonts.googleapis.com/css?family=Open+Sans:400,300);
 body {
+  font-family: Open Sans;
   padding: 0;
   margin: 0;
 }
-.chinchilla-body .button {
-  width: intrinsic;
-  padding: 5px;
-  border: 1px solid #111;
-  transition: 0.5s background ease;
+.option {
+  display: inline-block;
+  margin: 0 20px 0 20px;
+}
+.chinchilla-body {
+  padding-top: 30px;
+}
+.alg-buttons {
+  position: absolute;
+  left: 0;
+  top: 20;
+  margin-left: 40px;
+}
+.chinchilla-buttons {
+  position: absolute;
+  top: 20;
+  right: 0;
+  margin-right: 20px;
+}
+.button {
+  margin: 10px auto 10px auto;
   cursor: pointer;
+  padding: 4px 7px 5px 7px;
+  background: #fff;
+  border: 1px solid #333;
+  border-radius: 2px;
+  width: intrinsic;
+  transition: background 0.5s ease;
 }
-.chinchilla-body .button p {
-  margin: 0;
-  color: #111;
-  transition: 0.5s color ease;
+.button p {
+  color: #333;
+  transition: color 0.5s ease;
+  margin: 3px 0 3px 0;
 }
-.chinchilla-body .button:hover {
-  background: #111;
+.button.selected {
+  background: #333;
 }
-.chinchilla-body .button:hover p {
-  color: #eee;
+.button.selected p {
+  color: #fff;
+}
+.button:hover {
+  background: #333;
+}
+.button:hover p {
+  color: #fff;
+}
+.form-control,
+.form-control-time {
+  height: 40px;
+  border: 1px solid #333;
+  border-radius: 2px;
+  background: #fefefe;
+  text-align: center;
+  text-indent: 14px;
+  font-family: "Open Sans", Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  margin: 0 1px 0 1px;
+  -webkit-appearance: none;
+  -webkit-box-shadow: none;
+  box-shadow: none;
+  -webkit-transition: border 0.15 linear, color 0.15 linear, background-color 0.15 linear;
+  transition: border 0.15 linear, color 0.15 linear, background-color 0.15 linear;
+}
+.form-control.number,
+.form-control-time.number {
+  width: 50px;
+}
+.form-control:focus,
+.form-control-time:focus {
+  border-color: #000;
+  outline: 0;
+  -webkit-box-shadow: none;
+  box-shadow: none;
+  background: #fff;
+}
+form {
+  margin: auto;
+  margin-top: 10px;
+  text-align: center;
+}
+.std-dev {
+  position: absolute;
+  right: 0;
+  top: 20px;
+  margin-right: 260px;
+  text-align: center;
 }
 .line-graph {
   width: 100%;
-  float: left;
+  margin-top: 100px;
 }
 .line-graph svg {
   font: 12px Open Sans;
 }
 .line-graph .line {
   fill: none;
-  stroke: #000;
+  stroke: #333;
   stroke-width: 3px;
 }
 .line-graph .axis path,
 .line-graph .axis line {
   fill: none;
-  stroke: #000;
-  stroke-width: 4px;
+  stroke: #333;
+  stroke-width: 1px;
   shape-rendering: crispEdges;
 }
 .line-graph .y g.tick:first-child text,
@@ -52,7 +122,7 @@ body {
   opacity: 0;
 }
 .worker-stats {
-  width: 50%;
+  width: 100%;
   float: left;
   overflow: hidden;
   margin-top: 70px;
@@ -61,11 +131,10 @@ body {
   opacity: 1;
   overflow: hidden;
   height: 50px;
-  width: 50%;
+  width: 20%;
   float: left;
 }
 .worker-stats .worker-stat .color-key {
-  border-radius: 2px;
   margin-right: 20px;
   height: 50px;
   width: 5px;

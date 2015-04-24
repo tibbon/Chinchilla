@@ -55,7 +55,7 @@ func (t *LoadTester) LoadTest(w http.ResponseWriter, r *http.Request, p *TestPar
 	url := "http://localhost:" + t.ApiPort + "/api/"
 	reqPerType := [3]int{p.TypeOne, p.TypeTwo, p.TypeThree}
 
-	t.Running = StartUp(p.AlgType, p.WorkerCount, t.ApiPort)
+	t.Running = startUp(p.AlgType, p.WorkerCount, t.ApiPort)
 
 	time.Sleep(1000 * time.Millisecond)
 
@@ -68,6 +68,7 @@ func (t *LoadTester) LoadTest(w http.ResponseWriter, r *http.Request, p *TestPar
 			for j := 0; j < 3; j++ {
 				for i := 0; i < reqPerType[j]; i++ {
 					go func(v int) {
+						fmt.Println("sending")
 						resp, err := http.Get(url + strconv.Itoa(v+1) + "/test")
 						if err == nil {
 							ch <- &response{resp}
@@ -102,10 +103,24 @@ func (t *LoadTester) LoadTest(w http.ResponseWriter, r *http.Request, p *TestPar
 
 }
 
-func StartUp(algo string, numWorker int, apiPort string) []*exec.Cmd {
+func (t *LoadTester) StopTest() {
+	killServer(t.Running)
+}
+
+func (t *LoadTester) KillWorker(w http.ResponseWriter, r *http.Request, wid int) {
+
+	t.Running = removeWorker(t.Running, wid)
+
+}
+
+func (t *LoadTester) AddWorker() {
+	t.Running = addWorker(t.Running)
+}
+
+func startUp(algo string, numWorker int, apiPort string) []*exec.Cmd {
 	running := make([]*exec.Cmd, 1)
 	running[0] = exec.Command("./scheduler", apiPort, "9020", algo) // start scheduler
-	ip := GetIp()
+	ip := getIp()
 	for i := 1; i < numWorker+1; i++ {
 		running = append(running, exec.Command("./worker", ip+":9020", strconv.Itoa(i)))
 	}
@@ -119,10 +134,10 @@ func StartUp(algo string, numWorker int, apiPort string) []*exec.Cmd {
 	return running
 }
 
-func AddWorker(running []*exec.Cmd) []*exec.Cmd {
+func addWorker(running []*exec.Cmd) []*exec.Cmd {
 	fmt.Println("adding worker")
 	numWorkers := len(running)
-	ip := GetIp()
+	ip := getIp()
 
 	for i := 1; i < numWorkers; i++ {
 		if running[i] == nil {
@@ -137,7 +152,7 @@ func AddWorker(running []*exec.Cmd) []*exec.Cmd {
 
 }
 
-func GetIp() string {
+func getIp() string {
 	ips, _ := net.InterfaceAddrs()
 	ip := ips[1].String()
 	if loc := strings.Index(ip, "/"); loc != -1 {
@@ -146,15 +161,17 @@ func GetIp() string {
 	return ip
 }
 
-func RemoveWorker(running []*exec.Cmd, i int) []*exec.Cmd {
+func removeWorker(running []*exec.Cmd, i int) []*exec.Cmd {
 	fmt.Println("Removing worker")
 	running[i].Process.Kill()
 	running[i] = nil
 	return running
 }
 
-func KillServer(running []*exec.Cmd) {
+func killServer(running []*exec.Cmd) {
 	for i := 0; i < len(running); i++ {
-		running[i].Process.Kill()
+		if running[i] != nil {
+			running[i].Process.Kill()
+		}
 	}
 }

@@ -1,7 +1,8 @@
 
 var NewUI = function(workerStorage) {
 
-  var colors = ["#b5382f", "#5cb56b", "#b1b55c", "#4544b5", "#7031cd", "#00c9cd", "#bc8d60", "#90e600", "#e66900", "#4176e6", "#00ff94", "#ff0003", "#d9aaff", "#b8d0ff", "#ffc100", "#c6ffc3", "#077400", "#000674", "#700074", "#74001c"]
+  var sourceColors = ["#b5382f", "#5cb56b", "#b1b55c", "#4544b5", "#7031cd", "#00c9cd", "#bc8d60", "#90e600", "#e66900", "#4176e6", "#00ff94", "#ff0003", "#d9aaff", "#b8d0ff", "#ffc100", "#c6ffc3", "#077400", "#000674", "#700074", "#74001c"]
+  var colors = sourceColors.slice(0)
   var graph = {}
   var stats = {}
   var workers = []
@@ -63,6 +64,7 @@ var NewUI = function(workerStorage) {
                 .append("path")
                 .datum(this.data)
                 .attr("class", "line")
+                .attr("id", "line-" + this.id)
                 .attr("d", this.line),
 
     this.ui    = {
@@ -143,17 +145,26 @@ var NewUI = function(workerStorage) {
       }
     })
 
+    $("input[name='worker-count']").val(workers.length)
     updateStats();
+    updateStdDev();
 
   }
 
   var tick = function(wid) {
 
-    console.log(workers)
-
-      if(typeof(workers[wIndex(wid)]) == "undefined") {
+      if(typeof(workers[wIndex(wid)]) == "undefined" || graph.stop) {
+        d3.select("#line-"+wid)
+        .transition()
+        .duration(500)
+        .ease("linear")
+        .style("opacity", 0)
+        .each("end", function() {
+          d3.select(this).remove()
+        })
         return;
       }
+
 
       workers[wIndex(wid)].path.attr("d", workers[wIndex(wid)].line)
         .attr("transform", null)
@@ -193,6 +204,7 @@ var NewUI = function(workerStorage) {
 
     cellEnter.on("click", function(d) {
       graph.workerStorage.killWorker(d["id"])
+      colors.push(d.ui.color)
     });
 
     cellEnter.append("div")
@@ -210,24 +222,33 @@ var NewUI = function(workerStorage) {
     cellEnter.append("p")
       .attr("class", "q-val")
       .text(function(d) {
-        return "Queue Value " + d["q_val"]
+        return "Queue: " + d["q_val"]
       });
 
 
     cells.selectAll(".q-val").text(function(d, i) {
-        return "Queue Value " + d["q_val"].toFixed(2)
+        return "Queue " + d["q_val"].toFixed(2)
     })
-
-    
 
   }
 
   var start = function() {
     axisTick(2 - graph.n, 1);
+    graph.stop = false;
   }
 
   var stop = function() {
     graph.axisReset = true;
+    graph.stop = true;
+    graph.currentMax = 5;
+    graph.y = d3.scale.linear().domain([0, graph.currentMax]).range([graph.height, graph.margin.bottom * 1.5]);
+    graph.svg.selectAll("g.y.axis").call(d3.svg.axis().scale(graph.y).orient("right"))
+    colors = sourceColors.slice(0)
+
+    workers = []
+
+    updateStats()
+
     axisTick(2 - graph.n, 1);
   }
 
@@ -266,6 +287,38 @@ var NewUI = function(workerStorage) {
         })
     }
     
+
+  }
+
+  var updateStdDev = function() {
+
+    if(graph.stop) {
+      return 0;
+    }
+
+    var sum = 0
+    for (var i in workers) {
+      sum += workers[i].q_val
+    }
+
+    if(sum == 0) {
+      $(".std-dev h2").html(0)
+      return;
+    }
+
+    var avg = sum / workers.length
+
+    console.log(sum)
+
+    average = sum / workers.length
+    
+    var varSum = 0;
+
+    for (var i in workers) {
+      varSum +=  Math.pow((workers[i].q_val - avg),2)
+    }
+  
+    $(".std-dev h2").html((Math.sqrt(varSum / workers.length)).toFixed(4))
 
   }
 

@@ -15,24 +15,60 @@
 </head>
 <body>
     <div class="chinchilla-body">
-        <div class="test-input-form">
-            <h3>Customize the Load Test:</h3>
-            <form class="test-parameters">  
-                <p>Type 1 Requests (per second)</p>
-                <input type="number" name="req-1-per-sec" value=3> 
-                <p>Type 2 Requests (per second)</p>
-                <input type="number" name="req-2-per-sec" value=1>
-                <p>Type 3 Requests (per second)</p>
-                <input type="number" name="req-3-per-sec" value=1>
-                <input type="submit" style="display:none">
-            </form>
+    <div class="alg-buttons">
+        <div class="roundrobin-button button selected option-button">
+            <p>Round Robin</p>
         </div>
+        <div class="shortest-queue-button button option-button">
+            <p>Shortest Queue</p>
+        </div>
+        <h4>Distribution Algorithm</h4>
+    </div>
 
+
+
+    <div class="chinchilla-buttons">
         <div class="blitzkrieg-button button">
             <p>Begin Test</p>
         </div>
         <div class="stop-button button">
             <p>Stop Test</p>
+        </div>
+
+        <div class="add-worker button">
+            <p>Add worker</p>
+        </div>
+        <h4>Manage Test</h4>
+        </div>
+        <div class="test-input-form">
+            <form class="test-parameters">  
+                <div class="option">
+                <input type="number" name="req-1-per-sec" value=3 class="form-control number"> 
+                <p>Type 1 (0-.5)</p>
+                </div>
+                <div class="option">
+                
+                <input type="number" name="req-2-per-sec" value=1 class="form-control number">
+                <p>Type 2 (1-1.5)</p>
+                </div>
+                <div class="option">
+                
+                <input type="number" name="req-3-per-sec" value=1 class="form-control number">
+                <p>Type 3 (3-4.5)</p>
+                </div>
+
+                <div class="option">
+                
+                <input type="number" name="worker-count" value=3 class="form-control number"> 
+                <p>Number of Workers</p>
+                </div>
+                <input type="submit" style="display:none">
+            </form>
+        </div>
+
+        <div class="std-dev">
+            <h2> 0 </h2>
+            <h4>Standard Dev.</h4>
         </div>
         <div class="line-graph"></div>
         <div class="worker-stats"></div>

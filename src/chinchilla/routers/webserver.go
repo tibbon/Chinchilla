@@ -41,7 +41,7 @@ func main() {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/", serveIndex).Methods("get")
-	r.HandleFunc("/blitz", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/start_test", func(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 		one, _ := strconv.Atoi(r.Form["type_1"][0])
 		two, _ := strconv.Atoi(r.Form["type_2"][0])
@@ -52,13 +52,23 @@ func main() {
 		p := loadtest.TestParams{one, two, three, algType, workerCount}
 
 		T.Stop = false
+		T.StopTest()
 		T.LoadTest(w, r, &p)
 
 	}).Methods("post")
 
-	r.HandleFunc("/stop", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("stop requested")
+	r.HandleFunc("/stop_test", func(w http.ResponseWriter, r *http.Request) {
 		T.Stop = true
+		T.StopTest()
+	})
+
+	r.HandleFunc("/kill/{wid}", func(w http.ResponseWriter, r *http.Request) {
+		wid, _ := strconv.Atoi(mux.Vars(r)["wid"])
+		T.KillWorker(w, r, wid)
+	}).Methods("post")
+
+	r.HandleFunc("/add", func(w http.ResponseWriter, r *http.Request) {
+		T.AddWorker()
 	}).Methods("post")
 
 	r.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {

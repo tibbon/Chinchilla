@@ -58,6 +58,10 @@ function NewWorkerStorage() {
 
         removeWorker: function(wid) {
             delete storage[wid]
+        },
+
+        killAll: function() {
+            storage = {}
         }
     }
 
