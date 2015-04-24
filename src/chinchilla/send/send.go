@@ -45,17 +45,25 @@ func ReScheduler(r mssg.WorkReq, ReqQueue chan mssg.WorkReq) {
 	ReqQueue <- r
 }
 
-func Node(ReqQueue chan mssg.WorkReq, workers *types.MapQ) {
+func Node(ReqQueue chan mssg.WorkReq, workers *types.MapQ, algo string) {
 
 	for {
-
+		var node uint32
 		req := <-ReqQueue
 		if len(workers.M) == 0 {
 			fmt.Println("No workers you dangus")
 			os.Exit(1)
 		}
 		req.STime = time.Now()
-		node := schedule.ShortestQ(workers, req.Type)
+
+		if algo == "rr" {
+			node = schedule.RoundRobin(workers, req.Type)
+		} else if algo == "sq" {
+			node = schedule.ShortestQ(workers, req.Type)
+		} else {
+			node = schedule.ShortestQ(workers, req.Type)
+		}
+
 		workers.L.Lock()
 		tmp := workers.M[node]
 		tmp.Reqs = append(workers.M[node].Reqs, req)

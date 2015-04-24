@@ -63,11 +63,11 @@ func handleRequest(wReq *mssg.WorkReq, enc *gob.Encoder, id uint32) {
 	wReq.STime = time.Now()
 	switch wReq.Type {
 	case 1:
-		work_time = .1
+		work_time = (rand.Float64() * .5)
 	case 2:
-		work_time = 2.0
+		work_time = (rand.Float64() * 1) + 0.5
 	case 3:
-		work_time = 4.5
+		work_time = (rand.Float64() * 3.5) + 1
 	}
 
 	fmt.Println(work_time)

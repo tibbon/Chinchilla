@@ -28,8 +28,8 @@ func checkError(err error) {
 func main() {
 	args := os.Args
 
-	if len(args) != 3 {
-		fmt.Println("usage is <portno http> <portno tcp>")
+	if len(args) != 4 {
+		fmt.Println("usage is <portno http> <portno tcp> <algo> options for algo are: rr or sq")
 		os.Exit(1)
 	}
 	r := mux.NewRouter()
@@ -47,7 +47,7 @@ func main() {
 		handleRequest(jobs, ids, typ, w, mux.Vars(r)["arg1"], ReqQueue)
 	}).Methods("get")
 
-	go AcceptWorkers(ReqQueue, jobs)
+	go AcceptWorkers(ReqQueue, jobs, args[3])
 
 	http.Handle("/", r)
 	http.ListenAndServe(portno, nil)
@@ -71,7 +71,7 @@ func handleRequest(jobs *types.MapJ, ids *types.Stack, typ int, w http.ResponseW
 
 }
 
-func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs *types.MapJ) {
+func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs *types.MapJ, algo string) {
 	portno := strings.Join([]string{":", os.Args[2]}, "")
 
 	ln, err := net.Listen("tcp", portno)
@@ -80,7 +80,7 @@ func AcceptWorkers(ReqQueue chan mssg.WorkReq, jobs *types.MapJ) {
 	workers := &types.MapQ{make(map[uint32]types.Queue), new(sync.RWMutex)}
 	RespQueue := make(chan mssg.WorkResp)
 
-	go send.Node(ReqQueue, workers)
+	go send.Node(ReqQueue, workers, algo)
 	// Makes response pool for compete work requests
 	for i := 0; i < poolSize; i++ {
 		go send.Client(RespQueue, jobs)
@@ -158,7 +158,7 @@ func UpdateQueueTimes(resp *mssg.WorkResp, workers *types.MapQ, id uint32) {
 		tmp.Reqs = workers.M[resp.Id].Reqs[1:]
 		workers.M[resp.Id] = tmp
 	}
-	workers.M[id].AvgTimes[resp.Type] = t
+	workers.M[id].AvgTimes[resp.Type] = (workers.M[id].AvgTimes[resp.Type] * .9) + (.1 * t)
 	tmp = workers.M[id]
 
 	tmp.QVal -= (t + .01)
