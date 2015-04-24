@@ -62,6 +62,7 @@ function NewWorkerStorage() {
 
         killAll: function() {
             storage = {}
+            maxQAvg = 0;
         }
     }
 
