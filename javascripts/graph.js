@@ -7,6 +7,8 @@ var NewUI = function(workerStorage) {
   var stats = {}
   var workers = []
 
+  
+
   var wIndex = function(wid) {
     for (var w in workers) {
       if (workers[w].id == wid) {
@@ -46,8 +48,12 @@ var NewUI = function(workerStorage) {
 
   function worker(wid) {
 
+    var rgb = [];
+    for(var i = 0; i < 3; i++)
+        rgb.push(Math.floor(Math.random() * 255));
     var colorI = Math.floor(Math.random() * colors.length);
-    var color = colors.splice(colorI, 1)[0]
+    // var color = colors.splice(colorI, 1)[0]
+    var color = 'rgb('+ rgb.join(',') +')';
 
     this.id = wid
     this.q_val = 0
