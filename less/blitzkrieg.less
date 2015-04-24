@@ -1,0 +1,85 @@
+@import url(http://fonts.googleapis.com/css?family=Open+Sans:400,300);
+
+body {
+  padding: 0;
+  margin: 0;
+}
+
+.chinchilla-body {
+    .button {
+        width: intrinsic;
+        padding: 5px;
+        border: 1px solid #111;
+        transition: 0.5s background ease;
+        cursor: pointer;
+        p {
+            margin: 0;
+            color: #111;
+            transition: 0.5s color ease;
+        }
+        &:hover {
+            background: #111;
+            p {
+                color: #eee;
+            }
+        }
+    }
+}
+
+
+.line-graph {
+  width: 100%;
+  float: left;
+  svg {
+    font: 12px Open Sans;
+  }
+
+  .line {
+    fill: none;
+    stroke: #000;
+    stroke-width: 3px;
+  }
+
+  .axis path,
+  .axis line {
+    fill: none;
+    stroke: #000;
+    stroke-width: 4px;
+    shape-rendering: crispEdges;
+  }
+
+  .y g.tick:first-child text, .y path, .y line {
+    opacity: 0;
+  }
+  .x line {
+    stroke: #111;
+  }
+  .x .tick line {
+    opacity: 0;
+  }
+}
+
+.worker-stats {
+  width: 50%;
+  float: left;
+  overflow: hidden;
+  margin-top: 70px;
+  .worker-stat {
+    opacity: 1;
+    overflow: hidden;
+    height: 50px;
+    width: 50%;
+    float: left;
+    .color-key {
+      border-radius: 2px;
+      margin-right: 20px;
+      height: 50px;
+      width: 5px;
+      float: left;
+    }
+    p {
+      display: inline-block;
+      margin-right: 20px;
+    }
+  }
+}

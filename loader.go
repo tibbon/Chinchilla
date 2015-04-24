@@ -16,7 +16,7 @@ func main() {
 	running = AddWorker(running)
 	running = RemoveWorker(running, 3)
 	running = AddWorker(running)
-	KillServer(running)
+	// KillServer(running)
 	// fmt.Println("Killing them alll")
 	// for i := 0; i < len(running); i++ {
 	// 	running[i].Process.Kill()
@@ -47,12 +47,12 @@ func AddWorker(running []*exec.Cmd) []*exec.Cmd {
 
 	for i := 1; i < numWorkers; i++ {
 		if running[i] == nil {
-			running[i] = exec.Command("./worker", ip+":8080", strconv.Itoa(i))
+			running[i] = exec.Command("./worker", ip+":8081", strconv.Itoa(i))
 			running[i].Start()
 			return running
 		}
 	}
-	running = append(running, exec.Command("./worker", ip+":8080", strconv.Itoa(numWorkers)))
+	running = append(running, exec.Command("./worker", ip+":8081", strconv.Itoa(numWorkers)))
 	running[numWorkers].Start()
 	return running
 

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="javascripts/jquery.js"></script>
+    <script src="javascripts/velocity.js"></script>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="javascripts/underscore.js"></script>
+    <script src="javascripts/responses.js"></script>
+    <script src="javascripts/graph.js"></script>
+    <script src="javascripts/blitzkrieg.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="css/blitzkrieg.css">
+
+    <title>Chinchilla</title>
+</head>
+<body>
+    <div class="chinchilla-body">
+        <div class="test-input-form">
+            <h3>Customize the Load Test:</h3>
+            <form class="test-parameters">  
+                <p>Type 1 Requests (per second)</p>
+                <input type="number" name="req-1-per-sec" value=3> 
+                <p>Type 2 Requests (per second)</p>
+                <input type="number" name="req-2-per-sec" value=1>
+                <p>Type 3 Requests (per second)</p>
+                <input type="number" name="req-3-per-sec" value=1>
+                <input type="submit" style="display:none">
+            </form>
+        </div>
+
+        <div class="blitzkrieg-button button">
+            <p>Begin Test</p>
+        </div>
+        <div class="stop-button button">
+            <p>Stop Test</p>
+        </div>
+        <div class="line-graph"></div>
+        <div class="worker-stats"></div>
+    </div>
+</body>
+</html>
