@@ -1,0 +1,4 @@
+export GOPATH=$(pwd)
+go build src/chinchilla/routers/scheduler.go
+go build src/chinchilla/routers/worker.go
+go build src/chinchilla/routers/webserver.go
