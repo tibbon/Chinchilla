@@ -9,6 +9,9 @@ testing and error handling in place, it's a fun project that we really enjoyed b
 interface on your local machine, follow the steps below:
 
 Building the executables:
-go build src/chinchilla/routers/scheduler.go
-go build src/chinchilla/routers/worker.go
-go build src/chinchilla/routers/webserver.go
+sh compile or ./compile
+
+Running the webserver:
+./webserver 9010 9000
+The first port is the one that the webserver runs on, and must be 9010 because we did a bad thing and hard coded the websocket port...
+The second port is where the scheduler will run, and can be anything you want. The scheduler uses port 9020 for TCP connections with workers so I wouldn't touch that
