@@ -1,6 +1,13 @@
 Todd Pollak
 Teddy Cleveland
 
+Chinchilla is a project we built for our COMP0112 (Networking) course this semeseter (spring 2015). The idea behind the project
+was to test out different load balancing algorithms and visualize them in a meaningful way. We decided to use go to build
+the scheduler-worker infrastructure, and then built our testing server in go as well. The front end, which allows us to 
+visualize the different scheduling algorithms at work, was built using d3. Though we didn't have much time to put intense 
+testing and error handling in place, it's a fun project that we really enjoyed building. If you'd like to run the front end
+interface on your local machine, follow the steps below:
 
+Building the executables:
 go build src/chinchilla/routers/scheduler.go
 go build src/chinchilla/routers/worker.go
