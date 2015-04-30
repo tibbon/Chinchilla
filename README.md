@@ -1,6 +1,5 @@
 #Chinchilla
-###Todd Pollak
-###Teddy Cleveland
+by Todd Pollak and Teddy Cleveland
 
 ##Overview
 Chinchilla is a project we built for our COMP0112 (Networking) course this semester (spring 2015). The idea behind the project
