@@ -1,10 +1,10 @@
-"use strict";
+'use strict';
 
 var Average = 0
 
 var Blitzkrieg = function() {
 
-    var W = {}
+    var W = {};
 
     var blitzkrieg = {
 
@@ -71,7 +71,7 @@ var Blitzkrieg = function() {
                 workers.pushResponse(data)
             }
         },
-    }
+    };
 
     return blitzkrieg;
 
@@ -81,7 +81,7 @@ $(function() {
 
     var b = Blitzkrieg();
 
-    var workers = NewWorkerStorage()
+    var workers = NewWorkerStorage();
 
     var stop = false;
 
@@ -138,16 +138,16 @@ $(function() {
             $(".option-button").removeClass("selected")
             $(e.currentTarget).addClass("selected");
         }
-    })
+    });
 
 
     var refreshUI = function() {
         
         if(stop) {
-            return
+            return // Return wat?
         }
 
-        UI.update(workers)
+        UI.update(workers);
         workers.mapWorkers(function(wid, worker) {
             if(worker.kill) {
                 workers.removeWorker(wid)
@@ -157,10 +157,10 @@ $(function() {
                     dataType: "json"
                 })
             }
-        })
+        });
         window.setTimeout(function() {
             refreshUI();
-        }, 1000)
-    }
+        }, 1000);
+    };
 
-})
+});
