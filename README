@@ -11,3 +11,4 @@ interface on your local machine, follow the steps below:
 Building the executables:
 go build src/chinchilla/routers/scheduler.go
 go build src/chinchilla/routers/worker.go
+go build src/chinchilla/routers/webserver.go
